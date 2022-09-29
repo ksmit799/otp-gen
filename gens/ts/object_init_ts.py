@@ -3,6 +3,8 @@ template = """/**
  * DO NOT MODIFY
  */
 import FunctionParsing from "./FunctionParsing";
+import DatagramIterator from "../otp/net/DatagramIterator";
+{imports}
  
 export default class ObjectInitialization {{
 """
@@ -17,29 +19,33 @@ class ObjectInitTS:
         self._gen_buffer()
 
     def _gen_buffer(self):
-        self.outBuffer = template.format()
+        imports = ""
+        static_out = ""
 
         for name, dc_class in self.dcLoader.dclasses_by_name.items():
             if dc_class.isStruct():
                 continue
 
-            self.outBuffer += f"\tpublic static init{name}(): void {{\n"
+            imports += f'import I{name} from "../dc/I{name}";\n'
+            static_out += f"\tpublic static init{name}(dc_interface: I{name}, dgi: DatagramIterator): void {{\n"
 
             for i in range(dc_class.get_num_parents()):
                 parent = dc_class.get_parent(i)
-                self.outBuffer += (
-                    f"\t\tObjectInitialization.init{parent.getName()}();\n"
-                )
+                static_out += f"\t\tObjectInitialization.init{parent.getName()}(dc_interface, dgi);\n"
 
             for i in range(dc_class.get_num_fields()):
                 field = dc_class.get_field(i)
                 if field.isRequired():
-                    self.outBuffer += (
-                        f"\t\tFunctionParsing.call_{name}_{field.getName()}();\n"
-                    )
+                    static_out += f"\t\tFunctionParsing.call_{name}_{field.getName()}(dc_interface, dgi);\n"
 
-            self.outBuffer += "\t}\n\n"
+            static_out += "\t}\n\n"
 
+        if imports:
+            # Trim off newline.
+            imports = imports[:-1]
+
+        self.outBuffer = template.format(imports=imports)
+        self.outBuffer += static_out
         self.outBuffer += "\n}"
 
     def write(self):

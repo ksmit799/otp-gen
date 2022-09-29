@@ -9,7 +9,7 @@ export default interface DCMapping {
     getFunctionNameForId(id: number): string;
     getInitFunction(clsName: string): any;
     getClassNameForFunctionId(id: number): string;
-    getClasses(): any[];
+    getClasses(): string[];
     getFunctionForId(id: number): any;
     getClassForId(id: number): string;
     getRemoteInterface(clsName: string): any;
