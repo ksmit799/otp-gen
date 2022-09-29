@@ -7,6 +7,8 @@ from src.notifier import notify
 from gens.ts.dc_interface_ts import DCInterfaceTS
 from gens.ts.remote_interface_ts import RemoteInterfaceTS
 from gens.ts.remote_ts import RemoteTS
+from gens.ts.object_init_ts import ObjectInitTS
+from gens.ts.function_parsing_ts import FunctionParsingTS
 from gens.ts.mapping_ts import MappingTS
 
 
@@ -19,6 +21,8 @@ class TypeScriptGenerator(GeneratorInterface):
         self.generate_dc_interfaces()
         self.generate_remote_interfaces()
         self.generate_remotes()
+        self.generate_object_init()
+        self.generate_function_parsing()
         self.generate_mapping()
         self.copy_static_files()
 
@@ -67,6 +71,28 @@ class TypeScriptGenerator(GeneratorInterface):
 
             remote = RemoteTS(name, dclass, out_path)
             remote.write()
+
+        self.notify.info("Done!")
+
+    def generate_object_init(self):
+        self.notify.info("Generating object initialization...")
+
+        out_path = Path().absolute() / self.outDir / "generated/fn"
+        out_path.mkdir(parents=True, exist_ok=True)
+
+        obj = ObjectInitTS(self.dc_loader, out_path)
+        obj.write()
+
+        self.notify.info("Done!")
+
+    def generate_function_parsing(self):
+        self.notify.info("Generating function parsing...")
+
+        out_path = Path().absolute() / self.outDir / "generated/fn"
+        out_path.mkdir(parents=True, exist_ok=True)
+
+        func = FunctionParsingTS(self.dc_loader, out_path)
+        func.write()
 
         self.notify.info("Done!")
 

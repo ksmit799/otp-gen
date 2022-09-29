@@ -12,5 +12,5 @@ export default interface DCMapping {
     getClasses(): any[];
     getFunctionForId(id: number): any;
     getClassForId(id: number): string;
-    getRemoteInterface(name: string): any;
+    getRemoteInterface(clsName: string): any;
 }
