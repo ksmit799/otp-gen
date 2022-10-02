@@ -3,7 +3,7 @@ template = """/**
  * DO NOT MODIFY
  */
 import FunctionParsing from "./FunctionParsing";
-import DatagramIterator from "../otp/net/DatagramIterator";
+import DatagramIterator from "../../otp/net/DatagramIterator";
 {imports}
  
 export default class ObjectInitialization {{
@@ -27,16 +27,16 @@ class ObjectInitTS:
                 continue
 
             imports += f'import I{name} from "../dc/I{name}";\n'
-            static_out += f"\tpublic static init{name}(dc_interface: I{name}, dgi: DatagramIterator): void {{\n"
+            static_out += f"\tpublic static init{name}(dc_interface: I{name}, di: DatagramIterator): void {{\n"
 
             for i in range(dc_class.get_num_parents()):
                 parent = dc_class.get_parent(i)
-                static_out += f"\t\tObjectInitialization.init{parent.getName()}(dc_interface, dgi);\n"
+                static_out += f"\t\tObjectInitialization.init{parent.getName()}(dc_interface, di);\n"
 
             for i in range(dc_class.get_num_fields()):
                 field = dc_class.get_field(i)
                 if field.isRequired():
-                    static_out += f"\t\tFunctionParsing.call_{name}_{field.getName()}(dc_interface, dgi);\n"
+                    static_out += f"\t\tFunctionParsing.call_{name}_{field.getName()}(dc_interface, di);\n"
 
             static_out += "\t}\n\n"
 

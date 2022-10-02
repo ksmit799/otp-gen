@@ -26,6 +26,8 @@ class TypeScriptGenerator(GeneratorInterface):
         self.generate_mapping()
         self.copy_static_files()
 
+        self.notify.info(f"Finished building!")
+
     def generate_dc_interfaces(self):
         """
         Generates all the distributed class interfaces.

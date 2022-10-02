@@ -26,7 +26,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--notify-level",
         choices=["INFO", "WARNING", "ERROR"],
-        default="WARNING",
+        default="INFO",
         help="Notify level.",
     )
 
@@ -46,6 +46,8 @@ if __name__ == "__main__":
     # Load DC files.
     dc_loader = DCLoader()
     dc_loader.read_dc_files(args.dc_files)
+
+    notify.info(f"Build directory path: {args.out}")
 
     # Start the generator!
     generator = Generator(dc_loader, args.out)

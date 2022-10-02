@@ -3,19 +3,19 @@ from panda3d.direct import *
 
 def get_formatted_subatomic_type(subatomic_type):
     if subatomic_type == STUint8:
-        return "UInt8"
+        return "Uint8"
     elif subatomic_type == STInt8:
         return "Int8"
     elif subatomic_type == STUint16:
-        return "UInt16"
+        return "Uint16"
     elif subatomic_type == STInt16:
         return "Int16"
     elif subatomic_type == STUint32:
-        return "UInt32"
+        return "Uint32"
     elif subatomic_type == STInt32:
         return "Int32"
     elif subatomic_type == STUint64:
-        return "UInt64"
+        return "Uint64"
     elif subatomic_type == STInt64:
         return "Int64"
 
@@ -34,15 +34,15 @@ def get_formatted_subatomic_type(subatomic_type):
         return "Blob32"
 
     elif subatomic_type == STUint8array:
-        return "UInt8Array"
+        return "Uint8Array"
     elif subatomic_type == STInt8array:
         return "Int8Array"
     elif subatomic_type == STUint16array:
-        return "UInt16Array"
+        return "Uint16Array"
     elif subatomic_type == STInt16array:
         return "Int16Array"
     elif subatomic_type == STUint32array:
-        return "UInt32Array"
+        return "Uint32Array"
     elif subatomic_type == STInt32array:
         return "Int32Array"
 
