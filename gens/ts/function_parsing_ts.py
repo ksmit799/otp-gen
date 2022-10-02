@@ -62,6 +62,7 @@ class FunctionParsingTS:
                                 f"di.get{get_formatted_subatomic_type(elem_type)}(), "
                             )
                         elif elem_array:
+                            # TODO: Handle array elements.
                             pass
 
                     if params:
