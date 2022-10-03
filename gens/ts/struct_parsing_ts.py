@@ -7,6 +7,7 @@ template = """/**
  * DO NOT MODIFY
  */
 import DatagramIterator from "../../otp/net/DatagramIterator";
+import ReadHelper from "../../otp/net/ReadHelper";
 {imports}
 
 export default class StructParsing {{
@@ -52,10 +53,24 @@ class StructParsingTS:
                 if dc_param_simple:
                     static_out += f"\t\tobj.{field.getName()} = di.get{get_formatted_subatomic_type(dc_param_simple.getType())}();\n"
                 elif dc_param_array:
-                    # TODO: Arrays.
-                    static_out += f"\t\tobj.{field.getName()} = di.getArray();\n"
+                    static_out += f"\t\tobj.{field.getName()} = ReadHelper.readArrayStatic(di, () => {{\n"
 
-            static_out += f"\t\treturn obj;\n"
+                    # TODO: Can we have multi-dimensional arrays?
+                    elem_param_simple = (
+                        dc_param_array.getElementType().asSimpleParameter()
+                    )
+                    elem_param_class = (
+                        dc_param_array.getElementType().asClassParameter()
+                    )
+
+                    if elem_param_simple:
+                        static_out += f"\t\t\treturn di.get{get_formatted_subatomic_type(elem_param_simple.getType())}();\n"
+                    elif elem_param_class:
+                        static_out += f"\t\t\treturn StructParsing.get{elem_param_class.getClass().getName()}(di);\n"
+
+                    static_out += "\t\t});\n"
+
+            static_out += "\t\treturn obj;\n"
             static_out += "\t}\n\n"
 
         if imports:

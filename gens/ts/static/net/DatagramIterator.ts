@@ -36,6 +36,10 @@ export default class DatagramIterator {
         return 0;
     }
 
+    public getChar(): string {
+        return "";
+    }
+
     public getString(): string {
         return "";
     }
