@@ -4,4 +4,28 @@ class GeneratorInterface:
         self.outDir = out_dir
 
     def start(self):
-        pass
+        raise NotImplementedError
+
+    def generate_dc_interfaces(self):
+        raise NotImplementedError
+
+    def generate_remote_interfaces(self):
+        raise NotImplementedError
+
+    def generate_remotes(self):
+        raise NotImplementedError
+
+    def generate_struct_parsing(self):
+        raise NotImplementedError
+
+    def generate_object_init(self):
+        raise NotImplementedError
+
+    def generate_function_parsing(self):
+        raise NotImplementedError
+
+    def generate_mapping(self):
+        raise NotImplementedError
+
+    def copy_static_files(self):
+        raise NotImplementedError

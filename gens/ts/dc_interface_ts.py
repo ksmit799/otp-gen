@@ -44,8 +44,22 @@ class DCInterfaceTS:
         fields = ""
         for i in range(self.dclass.get_num_fields()):
             field = self.dclass.get_field(i)
-            field_type = "number"  # TODO.
-            fields += f"\tpublic {field.getName()}!: {field_type};\n"
+            dc_parameter = field.asParameter()
+            if not dc_parameter:
+                self.notify.warning(
+                    f"Got non parameter field in struct: {self.name} - {field.getName()}"
+                )
+                continue
+
+            dc_param_simple = dc_parameter.asSimpleParameter()
+            dc_param_array = dc_parameter.asArrayParameter()
+
+            if dc_param_simple:
+                elem_type = dc_param_simple.getType()
+            else:
+                elem_type = dc_param_array.getElementType()
+
+            fields += f"\tpublic {field.getName()}!: {get_ts_type_for_subatomic_type(elem_type)};\n"
 
         if fields:
             # Chop off our last char (\n)
@@ -90,19 +104,19 @@ class DCInterfaceTS:
 
                 if elem_class:
                     # This is (always?) a struct arg.
-                    dc_class = elem_class.getClass()
-                    if not dc_class.isStruct():
+                    elem_dc_class = elem_class.getClass()
+                    if not elem_dc_class.isStruct():
                         self.notify.warning(
                             f"Got non-struct class as field param: {self.name} - {field.getName()}"
                         )
                         continue
 
-                    class_name = dc_class.getName()
+                    class_name = elem_dc_class.getName()
                     if class_name not in existing_imports:
                         imports += f'import {class_name} from "./{class_name}";\n'
                         existing_imports.add(class_name)
 
-                    params += f"arg{arg_index}: {dc_class.getName()}, "
+                    params += f"arg{arg_index}: {class_name}, "
 
                 elif elem_simple:
                     elem_type = elem_simple.getType()

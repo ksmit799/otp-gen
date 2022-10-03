@@ -7,6 +7,7 @@ from src.notifier import notify
 from gens.ts.dc_interface_ts import DCInterfaceTS
 from gens.ts.remote_interface_ts import RemoteInterfaceTS
 from gens.ts.remote_ts import RemoteTS
+from gens.ts.struct_parsing_ts import StructParsingTS
 from gens.ts.object_init_ts import ObjectInitTS
 from gens.ts.function_parsing_ts import FunctionParsingTS
 from gens.ts.mapping_ts import MappingTS
@@ -21,6 +22,7 @@ class TypeScriptGenerator(GeneratorInterface):
         self.generate_dc_interfaces()
         self.generate_remote_interfaces()
         self.generate_remotes()
+        self.generate_struct_parsing()
         self.generate_object_init()
         self.generate_function_parsing()
         self.generate_mapping()
@@ -73,6 +75,17 @@ class TypeScriptGenerator(GeneratorInterface):
 
             remote = RemoteTS(name, dclass, out_path)
             remote.write()
+
+        self.notify.info("Done!")
+
+    def generate_struct_parsing(self):
+        self.notify.info("Generating struct parsing...")
+
+        out_path = Path().absolute() / self.outDir / "generated/fn"
+        out_path.mkdir(parents=True, exist_ok=True)
+
+        struct = StructParsingTS(self.dc_loader, out_path)
+        struct.write()
 
         self.notify.info("Done!")
 
