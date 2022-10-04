@@ -10,4 +10,7 @@ export default class Datagram {
     public addInt16(arg: number) {}
     public addUint32(arg: number) {}
     public addInt32(arg: number) {}
+    public addUint64(arg: number) {}
+    public addInt64(arg: number) {}
+    public addString(arg: string) {}
 }
