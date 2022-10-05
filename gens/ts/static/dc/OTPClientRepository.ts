@@ -109,6 +109,17 @@ export default class OTPClientRepository {
          */
     }
 
+    public sendHello(version: string) {
+        /**
+         * Sends a hello message to authenticate with the CA.
+         */
+        const dg = new Datagram();
+        dg.addUint16(MessageTypes.CLIENT_LOGIN);
+        dg.addUint32(DCMapping.getDCVersion());
+        dg.addString(version);
+        this.sendDatagram(dg);
+    }
+
     public setLocation(doId: number, parentId: number, zoneId: number) {
         /**
          * A distributed object is attempting to update its location...

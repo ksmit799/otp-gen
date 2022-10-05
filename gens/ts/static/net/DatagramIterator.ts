@@ -28,12 +28,12 @@ export default class DatagramIterator {
         return 0;
     }
 
-    public getUint64(): number {
-        return 0;
+    public getUint64(): bigint {
+        return BigInt(0);
     }
 
-    public getInt64(): number {
-        return 0;
+    public getInt64(): bigint {
+        return BigInt(0);
     }
 
     public getChar(): string {

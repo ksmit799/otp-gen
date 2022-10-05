@@ -9,11 +9,12 @@ def get_ts_type_for_subatomic_type(subatomic_type):
         STInt16,
         STUint32,
         STInt32,
-        STUint64,
-        STInt64,
         STFloat64,
     ):
         return "number"
+
+    elif subatomic_type in (STUint64, STInt64):
+        return "bigint"
 
     elif subatomic_type in (STChar, STString, STBlob, STBlob32):
         return "string"
