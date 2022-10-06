@@ -24,7 +24,7 @@ export default class Datagram {
 
     private ensureLength(size: number) {
         if (this.bufferIndex + size > MAX_DG_SIZE) {
-            throw new Error(`[DC] DG exceeds max length!`);
+            throw new Error("[DC] DG write exceeds max length!");
         }
 
         if (this.buffer.byteLength < this.bufferIndex + size) {
