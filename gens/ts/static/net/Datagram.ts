@@ -4,7 +4,7 @@
  */
 
 // Max amount of data we can have is an uint16 (65k bytes)
-const MAX_DG_SIZE = 0xFFFF;
+const MAX_DG_SIZE = 0xffff;
 // 128 bytes seems like a good minimum datagram size.
 const MIN_DG_SIZE = 0x80;
 

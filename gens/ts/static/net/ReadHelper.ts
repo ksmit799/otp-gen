@@ -6,11 +6,11 @@ import DatagramIterator from "./DatagramIterator";
 
 export default class ReadHelper {
     public static readArrayStatic(di: DatagramIterator, callback: () => any): any[] {
-        const arrayLength = di.getUint16()
+        const arrayLength = di.getUint16();
 
         const array = [];
         for (let i = 0; i < arrayLength; i++) {
-            array.push(callback())
+            array.push(callback());
         }
 
         return array;

@@ -5,7 +5,7 @@
 import DCInterface from "./DCInterface";
 
 export default class ObjectStore {
-    private objStore: {[doId: number]: DCInterface} = {}
+    private objStore: {[doId: number]: DCInterface} = {};
 
     public putObj(doId: number, distObj: DCInterface) {
         this.objStore[doId] = distObj;
@@ -16,6 +16,6 @@ export default class ObjectStore {
     }
 
     public removeObj(doId: number) {
-        delete this.objStore[doId]
+        delete this.objStore[doId];
     }
 }

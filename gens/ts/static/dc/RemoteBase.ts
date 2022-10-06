@@ -25,7 +25,7 @@ export default class RemoteBase {
 
     protected getPacker(): Datagram {
         const dg = new Datagram();
-        dg.addUint16(MessageTypes.CLIENT_OBJECT_SET_FIELD)
+        dg.addUint16(MessageTypes.CLIENT_OBJECT_SET_FIELD);
         return dg;
     }
 }
