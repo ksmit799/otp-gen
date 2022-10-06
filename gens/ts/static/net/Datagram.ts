@@ -99,6 +99,10 @@ export default class Datagram {
         }
     }
 
+    public addBlob(arg: string) {
+        // TODO: Add this.
+    }
+
     public getMessage(): ArrayBufferView {
         // Converting to a Uint8Array here *might* wipe out any endianness we've done above.
         // From what I can tell, this is a limitation of the platform itself.

@@ -19,6 +19,7 @@ class TypeScriptGenerator(GeneratorInterface):
     def start(self):
         self.notify.info("Configured generator for typescript...")
 
+        self.cleanup_out_dir()
         self.generate_dc_interfaces()
         self.generate_remote_interfaces()
         self.generate_remotes()
@@ -29,6 +30,12 @@ class TypeScriptGenerator(GeneratorInterface):
         self.copy_static_files()
 
         self.notify.info(f"Finished building!")
+
+    def cleanup_out_dir(self):
+        out_path = Path().absolute() / self.outDir / "generated"
+        if os.path.exists(out_path) and os.path.isdir(out_path):
+            # Clean any existing build files.
+            shutil.rmtree(out_path)
 
     def generate_dc_interfaces(self):
         """

@@ -96,6 +96,11 @@ export default class DatagramIterator {
         return str.join("");
     }
 
+    public getBlob(): string {
+        // TODO: Add this.
+        return "";
+    }
+
     public getUint32Array(): number[] {
         const len = this.getUint16();
         const arr = [];
