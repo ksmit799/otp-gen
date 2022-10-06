@@ -17,7 +17,7 @@ import DCInterface from "./DCInterface";
 export default class OTPClientRepository {
     public objStore: ObjectStore;
     protected wantDClassStore: boolean;
-    protected name2class: {[name: string]: DCInterface} = {};
+    protected name2class: {[name: string]: any} = {};
 
     constructor(wantDClassStore = true) {
         this.objStore = new ObjectStore();
@@ -33,7 +33,7 @@ export default class OTPClientRepository {
         }
     }
 
-    public setDClass(name: string, dclass: DCInterface) {
+    public setDClass(name: string, dclass: any) {
         this.name2class[name] = dclass;
     }
 
@@ -130,6 +130,15 @@ export default class OTPClientRepository {
         dg.addUint32(parentId);
         dg.addUint32(zoneId);
         this.sendDatagram(dg);
+    }
+
+    public generateGlobalObject(clsName: string, doId: number): any {
+        /**
+         * Generates a client-side view of a DistributedObjectUD.
+         */
+        const distObj = this.createObjectInstance(doId, clsName, 0, 0, false);
+        this.finalizeObjectCreation(doId, distObj);
+        return distObj;
     }
 
     protected handleSetField(di: DatagramIterator) {
