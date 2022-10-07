@@ -18,6 +18,8 @@ export default class OTPClientRepository {
     public objStore: ObjectStore;
     protected wantDClassStore: boolean;
     protected name2class: {[name: string]: any} = {};
+    protected interestCtx: number = 1;
+    protected interestCtxHandlers: {[context: number]: any} = {};
 
     constructor(wantDClassStore = true) {
         this.objStore = new ObjectStore();
@@ -79,6 +81,7 @@ export default class OTPClientRepository {
                 this.handleObjectEnterOwner(di);
                 break;
             case MessageTypes.CLIENT_DONE_SET_ZONE_RESP:
+                this.handleDoneSetZone(di);
                 break;
             case MessageTypes.CLIENT_GET_STATE_RESP:
                 // TODO: Ehh do we need to implement this?
@@ -129,6 +132,21 @@ export default class OTPClientRepository {
         dg.addUint32(doId);
         dg.addUint32(parentId);
         dg.addUint32(zoneId);
+        this.sendDatagram(dg);
+    }
+
+    public setInterest(handle: number, parent: number, zone: number, callback: any = null) {
+        /**
+         * Builds a new add interest operation with an optional callback.
+         */
+        const context = callback != null ? this.buildInterestContext(callback) : 0;
+
+        const dg = new Datagram();
+        dg.addUint16(MessageTypes.CLIENT_ADD_INTEREST);
+        dg.addUint16(handle);
+        dg.addUint32(context);
+        dg.addUint32(parent);
+        dg.addUint32(zone);
         this.sendDatagram(dg);
     }
 
@@ -213,7 +231,7 @@ export default class OTPClientRepository {
             console.log(`[DC] Created object instance.`);
 
             const initFunc = owner ? DCMapping.getOwnerInitFunction(clsName) : DCMapping.getInitFunction(clsName);
-            initFunc(distObj, doId, di);
+            initFunc(distObj, di);
             console.log(`[DC] Finished initializing object.`);
 
             if (di.getRemainingSize()) {
@@ -268,6 +286,21 @@ export default class OTPClientRepository {
         this.createObjectPreparsed(doId, fieldId, parentId, zoneId, true, di);
     }
 
+    protected handleDoneSetZone(di: DatagramIterator) {
+        const handle = di.getUint16();
+        const ctx = di.getUint32();
+        const handler = this.interestCtxHandlers[ctx];
+
+        try {
+            if (handler != null) {
+                delete this.interestCtxHandlers[ctx];
+                handler(handle, ctx);
+            }
+        } catch (e) {
+            console.error(`[DoneSetZone] An exception occurred in callback: ${e}`);
+        }
+    }
+
     protected handleObjectLocation(di: DatagramIterator) {
         const doId = di.getUint32();
         console.log(`[DC] Handling object location for doId: ${doId}`);
@@ -292,5 +325,11 @@ export default class OTPClientRepository {
         }
 
         return new remoteInterface(doId, this);
+    }
+
+    protected buildInterestContext(callback: any) {
+        const context = this.interestCtx++;
+        this.interestCtxHandlers[context] = callback;
+        return context;
     }
 }
