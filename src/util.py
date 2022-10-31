@@ -51,3 +51,17 @@ def get_formatted_subatomic_type(subatomic_type):
 
     else:
         return "Invalid"
+
+
+def is_server_field(field):
+    if field.getNumKeywords():
+        if (
+            not field.isClsend()
+            and not field.isOwnsend()
+            and not field.isOwnrecv()
+            and not field.isRequired()
+            and not field.isBroadcast()
+        ):
+            return True
+
+    return False
