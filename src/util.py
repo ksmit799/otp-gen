@@ -59,9 +59,13 @@ def is_server_field(field):
             not field.isClsend()
             and not field.isOwnsend()
             and not field.isOwnrecv()
-            and not field.isRequired()
+            and not field.isClrecv()
             and not field.isBroadcast()
         ):
             return True
 
     return False
+
+
+def has_owner_init(field):
+    return field.isOwnrecv() and field.isRequired()

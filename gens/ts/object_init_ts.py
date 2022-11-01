@@ -17,6 +17,9 @@ class ObjectInitTS:
         self.outBuffer = ""
 
         self._gen_buffer()
+        self._gen_buffer_ownrecv()
+
+        self.outBuffer += "\n}"
 
     def _gen_buffer(self):
         imports = ""
@@ -35,7 +38,7 @@ class ObjectInitTS:
 
             for i in range(dc_class.get_num_fields()):
                 field = dc_class.get_field(i)
-                if field.isRequired():
+                if field.isRequired() and (field.isBroadcast() or field.isClrecv()):
                     static_out += f"\t\tFunctionParsing.call_{name}_{field.getName()}(dc_interface, di);\n"
 
             static_out += "\t}\n\n"
@@ -46,7 +49,57 @@ class ObjectInitTS:
 
         self.outBuffer = template.format(imports=imports)
         self.outBuffer += static_out
-        self.outBuffer += "\n}"
+
+    def _gen_buffer_ownrecv(self):
+        static_out = ""
+        owner_parent_classes = set()
+
+        for name, dc_class in self.dcLoader.dclasses_by_name.items():
+            dc_class_has_owner = False
+
+            if dc_class.isStruct():
+                continue
+
+            # Forward pass here to determine if we can just skip this class
+            # if it has no owner fields.
+            has_owner_fields = False
+            for i in range(dc_class.get_num_inherited_fields()):
+                field = dc_class.get_inherited_field(i)
+                if field.isRequired() and field.isOwnrecv():
+                    has_owner_fields = True
+                    break
+
+            if not has_owner_fields:
+                continue
+
+            static_out += f"\tpublic static init{name}_ownrecv(dc_interface: I{name}, di: DatagramIterator): void {{\n"
+
+            for i in range(dc_class.get_num_parents()):
+                parent = dc_class.get_parent(i)
+                static_out += f"\t\tObjectInitialization.init{parent.getName()}"
+                static_out += (
+                    f'{"_ownrecv" if parent.getName() in owner_parent_classes else ""}'
+                )
+                static_out += f"(dc_interface, di);\n"
+
+            for i in range(dc_class.get_num_fields()):
+                field = dc_class.get_field(i)
+                if field.isRequired() and (
+                    field.isBroadcast() or field.isClrecv() or field.isOwnrecv()
+                ):
+                    if field.isOwnrecv():
+                        dc_class_has_owner = True
+
+                    static_out += f"\t\tFunctionParsing.call_{name}_{field.getName()}(dc_interface, di);\n"
+
+            if dc_class_has_owner:
+                # This class has at least one required ownrecv function.
+                # Any subclasses that inherit from this will call the owner init function instead.
+                owner_parent_classes.add(name)
+
+            static_out += "\t}\n\n"
+
+        self.outBuffer += static_out
 
     def write(self):
         if not self.outBuffer:

@@ -1,4 +1,4 @@
-from src.util import is_server_field
+from src.util import is_server_field, has_owner_init
 
 # TODO: Can we use a better generic for functions and classes?
 template = """/**
@@ -84,10 +84,15 @@ class MappingTS:
             static_out += f'\t\tthis.cls2rmccls["{class_name}"] = R{class_name};\n'
 
             # Build function mapping.
+            owner_init = False
             for i in range(dc_class.get_num_fields()):
                 field = dc_class.get_field(i)
                 if is_server_field(field):
                     continue
+
+                if not owner_init:
+                    # We only need at least one owner init field to mark this.
+                    owner_init = has_owner_init(field)
 
                 static_out += f"\t\tthis.id2fn[{field.getNumber()}] = FunctionParsing.call_{class_name}_{field.getName()};\n"
                 static_out += (
@@ -96,6 +101,8 @@ class MappingTS:
                 static_out += f"\t\tthis.fnid2clsname[{field.getNumber()}] = this.id2class[{class_id}];\n"
 
             static_out += f'\t\tthis.cls2initfn["{class_name}"] = ObjectInitialization.init{class_name};\n'
+            static_out += f'\t\tthis.cls2owninitfn["{class_name}"] = ObjectInitialization.init{class_name}'
+            static_out += f'{"_ownrecv" if owner_init else ""};\n'
 
         if imports:
             # Trim off newline.
