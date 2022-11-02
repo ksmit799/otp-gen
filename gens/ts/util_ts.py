@@ -16,8 +16,11 @@ def get_ts_type_for_subatomic_type(subatomic_type):
     elif subatomic_type in (STUint64, STInt64):
         return "bigint"
 
-    elif subatomic_type in (STChar, STString, STBlob, STBlob32):
+    elif subatomic_type in (STChar, STString):
         return "string"
+
+    elif subatomic_type in (STBlob, STBlob32):
+        return "ArrayBuffer"
 
     elif subatomic_type in (
         STUint8array,

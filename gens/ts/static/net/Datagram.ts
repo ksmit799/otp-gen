@@ -99,7 +99,7 @@ export default class Datagram {
         }
     }
 
-    public addBlob(arg: string) {
+    public addBlob(arg: ArrayBuffer) {
         // TODO: Add this.
     }
 

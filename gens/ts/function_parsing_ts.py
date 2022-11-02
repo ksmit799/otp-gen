@@ -88,12 +88,14 @@ class FunctionParsingTS:
                                 elem_array.getElementType().asClassParameter()
                             )
 
-                            params += "ReadHelper.readArrayStatic(di, () => {\n"
+                            params += (
+                                "ReadHelper.readArrayStatic(di, (arrayData) => {\n"
+                            )
 
                             if elem_param_simple:
-                                params += f"\t\t\treturn di.get{get_formatted_subatomic_type(elem_param_simple.getType())}();\n"
+                                params += f"\t\t\treturn arrayData.get{get_formatted_subatomic_type(elem_param_simple.getType())}();\n"
                             else:
-                                params += f"\t\t\treturn StructParsing.get{elem_param_class.getClass().getName()}(di);\n"
+                                params += f"\t\t\treturn StructParsing.get{elem_param_class.getClass().getName()}(arrayData);\n"
 
                             params += "\t\t}), "
 

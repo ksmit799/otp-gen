@@ -47,13 +47,26 @@ class StructParsingTS:
                     )
                     continue
 
+                dc_param_class = dc_parameter.asClassParameter()
                 dc_param_simple = dc_parameter.asSimpleParameter()
                 dc_param_array = dc_parameter.asArrayParameter()
 
-                if dc_param_simple:
+                if dc_param_class:
+                    # This is (always?) a struct arg.
+                    elem_dc_class = dc_param_class.getClass()
+                    if not elem_dc_class.isStruct():
+                        self.notify.warning(
+                            f"Got non-struct class as field param: {name} - {elem_dc_class.getName()}"
+                        )
+                        continue
+
+                    static_out += f"\t\tobj.{field.getName()} = StructParsing.get{elem_dc_class.getName()}(di);\n"
+
+                elif dc_param_simple:
                     static_out += f"\t\tobj.{field.getName()} = di.get{get_formatted_subatomic_type(dc_param_simple.getType())}();\n"
+
                 elif dc_param_array:
-                    static_out += f"\t\tobj.{field.getName()} = ReadHelper.readArrayStatic(di, () => {{\n"
+                    static_out += f"\t\tobj.{field.getName()} = ReadHelper.readArrayStatic(di, (arrayData) => {{\n"
 
                     # TODO: Can we have multi-dimensional arrays?
                     elem_param_simple = (
@@ -64,9 +77,9 @@ class StructParsingTS:
                     )
 
                     if elem_param_simple:
-                        static_out += f"\t\t\treturn di.get{get_formatted_subatomic_type(elem_param_simple.getType())}();\n"
+                        static_out += f"\t\t\treturn arrayData.get{get_formatted_subatomic_type(elem_param_simple.getType())}();\n"
                     elif elem_param_class:
-                        static_out += f"\t\t\treturn StructParsing.get{elem_param_class.getClass().getName()}(di);\n"
+                        static_out += f"\t\t\treturn StructParsing.get{elem_param_class.getClass().getName()}(arrayData);\n"
 
                     static_out += "\t\t});\n"
 
