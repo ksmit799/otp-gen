@@ -3,6 +3,8 @@
  * DO NOT MODIFY
  */
 
+import MessageTypes from "./MessageTypes";
+
 // Max amount of data we can have is an uint16 (65k bytes)
 const MAX_DG_SIZE = 0xffff;
 // 128 bytes seems like a good minimum datagram size.
@@ -101,6 +103,23 @@ export default class Datagram {
 
     public addBlob(arg: ArrayBuffer) {
         // TODO: Add this.
+    }
+
+    public addChannel(channel: number) {
+        this.addUint64(BigInt(channel));
+    }
+
+    public addServerHeader(channel: number, sender: number, code: number) {
+        this.addInt8(1);
+        this.addChannel(channel);
+        this.addChannel(sender);
+        this.addUint16(code);
+    }
+
+    public addServerControlHeader(code: number) {
+        this.addInt8(1);
+        this.addChannel(MessageTypes.CONTROL_CHANNEL);
+        this.addUint16(code);
     }
 
     public getMessage(): ArrayBufferView {

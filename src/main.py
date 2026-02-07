@@ -19,6 +19,12 @@ if __name__ == "__main__":
         help="An array of DC file paths to be loaded.",
     )
     parser.add_argument(
+        "--context",
+        choices=["ai", "cl", "both"],
+        default="both",
+        help="The type of files to be generated (ai/cl/both)"
+    )
+    parser.add_argument(
         "--out",
         default="dist",
         help="The path to output generated files.",
@@ -50,5 +56,5 @@ if __name__ == "__main__":
     notify.info(f"Build directory path: {args.out}")
 
     # Start the generator!
-    generator = Generator(dc_loader, args.out)
+    generator = Generator(dc_loader, args.context, args.args.out)
     generator.start()
