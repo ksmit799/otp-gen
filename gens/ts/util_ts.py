@@ -20,7 +20,7 @@ def get_ts_type_for_subatomic_type(subatomic_type):
         return "string"
 
     elif subatomic_type in (STBlob, STBlob32):
-        return "ArrayBuffer"
+        return "ArrayBufferView"
 
     elif subatomic_type in (
         STUint8array,

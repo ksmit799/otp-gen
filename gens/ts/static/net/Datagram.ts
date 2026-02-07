@@ -101,8 +101,15 @@ export default class Datagram {
         }
     }
 
-    public addBlob(arg: ArrayBuffer) {
-        // TODO: Add this.
+    public addBlob(arg: ArrayBufferView) {
+        // N.B. This is just a view over the existing data, not an alloc.
+        const bytes = new Uint8Array(arg.buffer, arg.byteOffset, arg.byteLength);
+
+        this.ensureLength(bytes.byteLength + 2); // Plus 2 for the uint16.
+        this.addUint16(bytes.byteLength);
+
+        new Uint8Array(this.buffer, this.bufferIndex, bytes.byteLength).set(bytes);
+        this.bufferIndex += bytes.byteLength;
     }
 
     public addChannel(channel: number) {
@@ -122,9 +129,7 @@ export default class Datagram {
         this.addUint16(code);
     }
 
-    public getMessage(): ArrayBufferView {
-        // Converting to a Uint8Array here *might* wipe out any endianness we've done above.
-        // From what I can tell, this is a limitation of the platform itself.
+    public getMessage(): Uint8Array {
         return new Uint8Array(this.buffer.slice(0, this.bufferIndex));
     }
 }
