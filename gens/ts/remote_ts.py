@@ -78,10 +78,24 @@ class RemoteTS:
 
                 elif elem_simple:
                     elem_type = elem_simple.getType()
+                    elem_type_formatted = get_formatted_subatomic_type(elem_type)
+                    # uint arrays (uint16array, int8array, etc.) are "deprecated" element types,
+                    # but we still support them. They need to be treated as an array, as we don't include
+                    # redundant functions in our Datagram implementation (and neither does Panda).
+                    is_uint_array = True if "Array" in elem_type_formatted else False
+
                     params += (
                         f"{elem_name}: {get_ts_type_for_subatomic_type(elem_type)}, "
                     )
-                    packing += f"\t\tdg.add{get_formatted_subatomic_type(elem_type)}({elem_name});\n"
+
+                    if is_uint_array:
+                        elem_type_formatted = elem_type_formatted.replace("Array", "")
+
+                        packing += f"\t\tReadHelper.writeArrayStatic(dg, {elem_name}, (arrData, arrVal) => {{\n"
+                        packing += f"\t\t\tarrData.add{elem_type_formatted}(arrVal);\n"
+                        packing += "\t\t});\n"
+                    else:
+                        packing += f"\t\tdg.add{elem_type_formatted}({elem_name});\n"
 
                 elif elem_array:
                     elem_param_simple = elem_array.getElementType().asSimpleParameter()

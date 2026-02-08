@@ -77,9 +77,28 @@ class FunctionParsingTS:
 
                         if elem_simple:
                             elem_type = elem_simple.getType()
-                            params += (
-                                f"di.get{get_formatted_subatomic_type(elem_type)}(), "
+                            elem_type_formatted = get_formatted_subatomic_type(
+                                elem_type
                             )
+                            # uint arrays (uint16array, int8array, etc.) are "deprecated" element types,
+                            # but we still support them. They need to be treated as an array, as we don't include
+                            # redundant functions in our Datagram implementation (and neither does Panda).
+                            is_uint_array = (
+                                True if "Array" in elem_type_formatted else False
+                            )
+
+                            if is_uint_array:
+                                elem_type_formatted = elem_type_formatted.replace(
+                                    "Array", ""
+                                )
+
+                                params += (
+                                    "ReadHelper.readArrayStatic(di, (arrayData) => {\n"
+                                )
+                                params += f"\t\t\treturn arrayData.get{elem_type_formatted}();\n"
+                                params += "\t\t}), "
+                            else:
+                                params += f"di.get{elem_type_formatted}(), "
 
                         elif elem_array:
                             elem_param_simple = (
