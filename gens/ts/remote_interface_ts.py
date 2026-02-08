@@ -63,6 +63,8 @@ class RemoteInterfaceTS:
                 elem_simple = elem.asSimpleParameter()
                 elem_array = elem.asArrayParameter()
 
+                elem_name = elem.getName() or f"arg{arg_index}"
+
                 if elem_class:
                     # This is (always?) a struct arg.
                     elem_dc_class = elem_class.getClass()
@@ -77,12 +79,12 @@ class RemoteInterfaceTS:
                         imports += f'import {class_name} from "../dc/{class_name}";\n'
                         existing_imports.add(class_name)
 
-                    params += f"arg{arg_index}: {class_name}, "
+                    params += f"{elem_name}: {class_name}, "
 
                 elif elem_simple:
                     elem_type = elem_simple.getType()
                     params += (
-                        f"arg{arg_index}: {get_ts_type_for_subatomic_type(elem_type)}, "
+                        f"{elem_name}: {get_ts_type_for_subatomic_type(elem_type)}, "
                     )
 
                 elif elem_array:
@@ -98,10 +100,10 @@ class RemoteInterfaceTS:
                             )
                             existing_imports.add(class_name)
 
-                        params += f"arg{arg_index}: {class_name}[], "
+                        params += f"{elem_name}: {class_name}[], "
                     else:
                         # We have an array of generic types.
-                        params += f"arg{arg_index}: {get_ts_type_for_subatomic_type(elem_param_simple.getType())}[], "
+                        params += f"{elem_name}: {get_ts_type_for_subatomic_type(elem_param_simple.getType())}[], "
 
                 arg_index += 1
 

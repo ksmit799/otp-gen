@@ -37,7 +37,6 @@ class StructPackingTS:
 
             imports += f'import {name} from "../dc/{name}";\n'
 
-            params = ""
             packing = ""
             arg_index = 1
             for i in range(dc_class.get_num_fields()):
@@ -53,8 +52,6 @@ class StructPackingTS:
                 dc_param_simple = dc_parameter.asSimpleParameter()
                 dc_param_array = dc_parameter.asArrayParameter()
 
-                # TODO: We need to do packing for the rest of this.
-
                 if dc_param_class:
                     # This is (always?) a struct arg.
                     elem_dc_class = dc_param_class.getClass()
@@ -65,15 +62,11 @@ class StructPackingTS:
                         continue
 
                     class_name = elem_dc_class.getName()
-                    params += f"arg{arg_index}: {class_name}, "
-                    packing += f"\t\tStructPacking.pack{class_name}(dg, arg1.{dc_param_class.getName()});\n"
+                    packing += f"\t\tStructPacking.pack{class_name}(dg, arg.{dc_param_class.getName()});\n"
 
                 elif dc_param_simple:
                     elem_type = dc_param_simple.getType()
-                    params += (
-                        f"arg{arg_index}: {get_ts_type_for_subatomic_type(elem_type)}, "
-                    )
-                    packing += f"\t\tdg.add{get_formatted_subatomic_type(elem_type)}(arg1.{dc_param_simple.getName()});\n"
+                    packing += f"\t\tdg.add{get_formatted_subatomic_type(elem_type)}(arg.{dc_param_simple.getName()});\n"
 
                 elif dc_param_array:
                     elem_param_simple = (
@@ -83,28 +76,22 @@ class StructPackingTS:
                         dc_param_array.getElementType().asClassParameter()
                     )
 
-                    packing += f"\t\tReadHelper.writeArrayStatic(dg, arg1.{dc_param_array.getName()}, (arrData, arrVal) => {{\n"
+                    packing += f"\t\tReadHelper.writeArrayStatic(dg, arg.{dc_param_array.getName()}, (arrData, arrVal) => {{\n"
 
                     if elem_param_class:
                         # We have an array of classes.
                         class_name = elem_param_class.getClass().getName()
-                        params += f"arg{arg_index}: {class_name}[], "
                         packing += f"\t\t\tthis.pack{class_name}(arrData, arrVal)\n"
 
                     elif elem_param_simple:
                         # We have an array of generic types.
-                        params += f"arg{arg_index}: {get_ts_type_for_subatomic_type(elem_param_simple.getType())}[], "
                         packing += f"\t\t\tarrData.add{get_formatted_subatomic_type(elem_param_simple.getType())}(arrVal);\n"
 
                     packing += "\t\t});\n"
 
                 arg_index += 1
 
-            if params:
-                # Slice off last two chars (, )
-                params = params[:-2]
-
-            fields += f"\tpublic static pack{name}(dg: Datagram, arg1: {name}) {{\n"
+            fields += f"\tpublic static pack{name}(dg: Datagram, arg: {name}) {{\n"
             fields += packing
             fields += "\t}\n\n"
 

@@ -9,7 +9,7 @@ template = """/**
  
 import RemoteBase from "../../otp/dc/RemoteBase";
 import ReadHelper from "../../otp/net/ReadHelper";
-import StructPacking from "../../otp/fn/StructPacking";
+import StructPacking from "../fn/StructPacking";
 {imports}
 export default class R{className} extends RemoteBase implements {implements} {{
 {fields}
@@ -57,7 +57,7 @@ class RemoteTS:
                 elem_simple = elem.asSimpleParameter()
                 elem_array = elem.asArrayParameter()
 
-                # TODO: We need to do packing for the rest of this.
+                elem_name = elem.getName() or f"arg{arg_index}"
 
                 if elem_class:
                     # This is (always?) a struct arg.
@@ -73,23 +73,21 @@ class RemoteTS:
                         imports += f'import {class_name} from "../dc/{class_name}";\n'
                         existing_imports.add(class_name)
 
-                    params += f"arg{arg_index}: {class_name}, "
-                    packing += (
-                        f"\t\tStructPacking.pack{class_name}(dg, arg{arg_index});\n"
-                    )
+                    params += f"{elem_name}: {class_name}, "
+                    packing += f"\t\tStructPacking.pack{class_name}(dg, {elem_name});\n"
 
                 elif elem_simple:
                     elem_type = elem_simple.getType()
                     params += (
-                        f"arg{arg_index}: {get_ts_type_for_subatomic_type(elem_type)}, "
+                        f"{elem_name}: {get_ts_type_for_subatomic_type(elem_type)}, "
                     )
-                    packing += f"\t\tdg.add{get_formatted_subatomic_type(elem_type)}(arg{arg_index});\n"
+                    packing += f"\t\tdg.add{get_formatted_subatomic_type(elem_type)}({elem_name});\n"
 
                 elif elem_array:
                     elem_param_simple = elem_array.getElementType().asSimpleParameter()
                     elem_param_class = elem_array.getElementType().asClassParameter()
 
-                    packing += f"\t\tReadHelper.writeArrayStatic(dg, arg{arg_index}, (arrData, arrVal) => {{\n"
+                    packing += f"\t\tReadHelper.writeArrayStatic(dg, {elem_name}, (arrData, arrVal) => {{\n"
 
                     if elem_param_class:
                         # We have an array of classes.
@@ -100,14 +98,14 @@ class RemoteTS:
                             )
                             existing_imports.add(class_name)
 
-                        params += f"arg{arg_index}: {class_name}[], "
+                        params += f"{elem_name}: {class_name}[], "
                         packing += (
                             f"\t\t\tStructPacking.pack{class_name}(arrData, arrVal);\n"
                         )
 
                     elif elem_param_simple:
                         # We have an array of generic types.
-                        params += f"arg{arg_index}: {get_ts_type_for_subatomic_type(elem_param_simple.getType())}[], "
+                        params += f"{elem_name}: {get_ts_type_for_subatomic_type(elem_param_simple.getType())}[], "
                         packing += f"\t\t\tarrData.add{get_formatted_subatomic_type(elem_param_simple.getType())}(arrVal);\n"
 
                     packing += "\t\t});\n"
