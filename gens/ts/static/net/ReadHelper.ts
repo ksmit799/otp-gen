@@ -22,7 +22,7 @@ export default class ReadHelper {
     public static writeArrayStatic(
         dg: Datagram,
         arr: any[],
-        callback: (arrayData: Datagram, arrayVal: any) => void,
+        callback: (arrData: Datagram, arrVal: any) => void,
     ): void {
         const dg2 = new Datagram();
         for (const data of arr) {

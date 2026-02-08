@@ -2,6 +2,7 @@ import os
 import shutil
 from pathlib import Path
 
+from gens.ts.struct_packing_ts import StructPackingTS
 from src.generator_interface import GeneratorInterface
 from src.notifier import notify
 from gens.ts.dc_interface_ts import DCInterfaceTS
@@ -27,13 +28,15 @@ class TypeScriptGenerator(GeneratorInterface):
             self.generate_remote_interfaces()
             self.generate_remotes()
             self.generate_struct_parsing()
+            self.generate_struct_packing()
             self.generate_object_init()
             self.generate_function_parsing()
             self.generate_mapping()
 
         # Server (AI/UD) specific generations.
         if self.context in ["ai", "both"]:
-            self.generate_dclasses()
+            # self.generate_dclasses()
+            pass
 
         self.copy_static_files()
 
@@ -115,6 +118,21 @@ class TypeScriptGenerator(GeneratorInterface):
         out_path.mkdir(parents=True, exist_ok=True)
 
         struct = StructParsingTS(self.dc_loader, out_path)
+        struct.write()
+
+        self.notify.info("Done!")
+
+    def generate_struct_packing(self):
+        """
+        Generates functions used to pack structs defined in our dc files.
+        :return:
+        """
+        self.notify.info("Generating struct packing...")
+
+        out_path = Path().absolute() / self.outDir / "generated/fn"
+        out_path.mkdir(parents=True, exist_ok=True)
+
+        struct = StructPackingTS(self.dc_loader, out_path)
         struct.write()
 
         self.notify.info("Done!")

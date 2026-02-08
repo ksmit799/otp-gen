@@ -19,6 +19,9 @@ class GeneratorInterface:
     def generate_struct_parsing(self):
         raise NotImplementedError
 
+    def generate_struct_packing(self):
+        raise NotImplementedError
+
     def generate_object_init(self):
         raise NotImplementedError
 
