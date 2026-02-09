@@ -45,144 +45,99 @@ class TypeScriptGenerator(GeneratorInterface):
     def cleanup_out_dir(self):
         out_path = Path().absolute() / self.outDir / "generated"
         if os.path.exists(out_path) and os.path.isdir(out_path):
-            # Clean any existing build files.
             shutil.rmtree(out_path)
 
-    def generate_dc_interfaces(self):
-        """
-        Generates interfaces for all the distributed classes (including structs).
-        These will contain the typings for *all* of the dclass fields,
-        both fields the client can send and ones it can receive.
-        :return:
-        """
-        self.notify.info("Generating DC interfaces...")
+    def _out_path(self, subdir):
+        path = Path().absolute() / self.outDir / "generated" / subdir
+        path.mkdir(parents=True, exist_ok=True)
+        return path
 
-        out_path = Path().absolute() / self.outDir / "generated/dc"
-        out_path.mkdir(parents=True, exist_ok=True)
-
+    def _run_per_class(
+        self, step_name, subdir, writer_class, skip_structs=False, debug_each=False
+    ):
+        self.notify.info(step_name)
+        out_path = self._out_path(subdir)
         for name, dclass in self.dc_loader.dclasses_by_name.items():
-            interface = DCInterfaceTS(name, dclass, out_path)
-            interface.write()
-            self.notify.debug(f"Wrote interface class '{name}'")
-
+            if skip_structs and dclass.isStruct():
+                continue
+            writer_class(name, dclass, out_path).write()
+            if debug_each:
+                self.notify.debug(f"Wrote '{name}'")
         self.notify.info("Done!")
+
+    def _run_single(self, step_name, subdir, writer_class, **writer_kwargs):
+        self.notify.info(step_name)
+        out_path = self._out_path(subdir)
+        writer_class(self.dc_loader, out_path, **writer_kwargs).write()
+        self.notify.info("Done!")
+
+    def generate_dc_interfaces(self):
+        """Interfaces for all distributed classes (including structs)."""
+        self._run_per_class(
+            "Generating DC interfaces...",
+            "dc",
+            DCInterfaceTS,
+            skip_structs=False,
+            debug_each=True,
+        )
 
     def generate_remote_interfaces(self):
-        """
-        Generates interfaces for all the distributed classes, excluding structs.
-        These will contain the typings for only fields marked clsend/ownsend.
-        :return:
-        """
-        self.notify.info("Generating remote interfaces...")
-
-        out_path = Path().absolute() / self.outDir / "generated/iremote"
-        out_path.mkdir(parents=True, exist_ok=True)
-
-        for name, dclass in self.dc_loader.dclasses_by_name.items():
-            if dclass.isStruct():
-                continue
-
-            interface = RemoteInterfaceTS(name, dclass, out_path)
-            interface.write()
-
-        self.notify.info("Done!")
+        """Interfaces for non-struct classes, typings for clsend/ownsend only."""
+        self._run_per_class(
+            "Generating remote interfaces...",
+            "iremote",
+            RemoteInterfaceTS,
+            skip_structs=True,
+        )
 
     def generate_remotes(self):
-        """
-        Generates "remote" classes based on the previously generated remote interfaces
-        that implement the actual packing of datagrams to be sent on the wire.
-        :return:
-        """
-        self.notify.info("Generating remotes...")
-
-        out_path = Path().absolute() / self.outDir / "generated/remote"
-        out_path.mkdir(parents=True, exist_ok=True)
-
-        for name, dclass in self.dc_loader.dclasses_by_name.items():
-            if dclass.isStruct():
-                continue
-
-            remote = RemoteTS(name, dclass, out_path)
-            remote.write()
-
-        self.notify.info("Done!")
+        """Remote classes implementing datagram packing for clsend/ownsend."""
+        self._run_per_class(
+            "Generating remotes...",
+            "remote",
+            RemoteTS,
+            skip_structs=True,
+        )
 
     def generate_struct_parsing(self):
-        """
-        Generates functions used to parse structs defined in our dc files.
-        :return:
-        """
-        self.notify.info("Generating struct parsing...")
-
-        out_path = Path().absolute() / self.outDir / "generated/fn"
-        out_path.mkdir(parents=True, exist_ok=True)
-
-        struct = StructParsingTS(self.dc_loader, out_path)
-        struct.write()
-
-        self.notify.info("Done!")
+        """Functions to parse structs from DC files."""
+        self._run_single(
+            "Generating struct parsing...",
+            "fn",
+            StructParsingTS,
+        )
 
     def generate_struct_packing(self):
-        """
-        Generates functions used to pack structs defined in our dc files.
-        :return:
-        """
-        self.notify.info("Generating struct packing...")
-
-        out_path = Path().absolute() / self.outDir / "generated/fn"
-        out_path.mkdir(parents=True, exist_ok=True)
-
-        struct = StructPackingTS(self.dc_loader, out_path)
-        struct.write()
-
-        self.notify.info("Done!")
+        """Functions to pack structs into datagrams."""
+        self._run_single(
+            "Generating struct packing...",
+            "fn",
+            StructPackingTS,
+        )
 
     def generate_object_init(self):
-        """
-        Generates functions to parse/initialize distributed objects coming into our view.
-        These will be fields marked required/ownrecv.
-        :return:
-        """
-        self.notify.info("Generating object initialization...")
-
-        out_path = Path().absolute() / self.outDir / "generated/fn"
-        out_path.mkdir(parents=True, exist_ok=True)
-
-        obj = ObjectInitTS(self.dc_loader, out_path)
-        obj.write()
-
-        self.notify.info("Done!")
+        """Functions to init distributed objects (required/ownrecv)."""
+        self._run_single(
+            "Generating object initialization...",
+            "fn",
+            ObjectInitTS,
+        )
 
     def generate_function_parsing(self):
-        """
-        Generates function to parse distributed object field updates coming from the server.
-        :return:
-        """
-        self.notify.info("Generating function parsing...")
-
-        out_path = Path().absolute() / self.outDir / "generated/fn"
-        out_path.mkdir(parents=True, exist_ok=True)
-
-        func = FunctionParsingTS(self.dc_loader, out_path)
-        func.write()
-
-        self.notify.info("Done!")
+        """Functions to parse field updates from the server."""
+        self._run_single(
+            "Generating function parsing...",
+            "fn",
+            FunctionParsingTS,
+        )
 
     def generate_mapping(self):
-        """
-        Generates a static mapping between distributed object class/field IDs to the functions
-        we have previously generated.
-        :return:
-        """
-        self.notify.info("Generating mapping...")
-
-        out_path = Path().absolute() / self.outDir / "generated/fn"
-        out_path.mkdir(parents=True, exist_ok=True)
-
-        mapping = MappingTS(self.dc_loader, out_path)
-        mapping.write()
-
-        self.notify.info("Done!")
+        """Static mapping from class/field IDs to generated functions."""
+        self._run_single(
+            "Generating mapping...",
+            "fn",
+            MappingTS,
+        )
 
     def copy_static_files(self):
         self.notify.info("Copying static files...")
