@@ -2,10 +2,11 @@ import os
 import shutil
 from pathlib import Path
 
-from gens.ts.struct_packing_ts import StructPackingTS
 from src.generator_interface import GeneratorInterface
 from src.notifier import notify
+from gens.ts.struct_packing_ts import StructPackingTS
 from gens.ts.dc_interface_ts import DCInterfaceTS
+from gens.ts.dclasses_ts import DClassesTS
 from gens.ts.remote_interface_ts import RemoteInterfaceTS
 from gens.ts.remote_ts import RemoteTS
 from gens.ts.struct_parsing_ts import StructParsingTS
@@ -22,21 +23,17 @@ class TypeScriptGenerator(GeneratorInterface):
 
         self.cleanup_out_dir()
 
-        # Client (CL) specific generations.
-        if self.context in ["cl", "both"]:
-            self.generate_dc_interfaces()
-            self.generate_remote_interfaces()
-            self.generate_remotes()
-            self.generate_struct_parsing()
-            self.generate_struct_packing()
-            self.generate_object_init()
-            self.generate_function_parsing()
-            self.generate_mapping()
+        self.generate_dc_interfaces()
+        self.generate_remote_interfaces()
+        self.generate_remotes()
+        self.generate_struct_parsing()
+        self.generate_struct_packing()
+        self.generate_object_init()
+        self.generate_function_parsing()
+        self.generate_mapping()
 
-        # Server (AI/UD) specific generations.
         if self.context in ["ai", "both"]:
-            # self.generate_dclasses()
-            pass
+            self.generate_dclasses()
 
         self.copy_static_files()
 
@@ -70,6 +67,14 @@ class TypeScriptGenerator(GeneratorInterface):
         out_path = self._out_path(subdir)
         writer_class(self.dc_loader, out_path, **writer_kwargs).write()
         self.notify.info("Done!")
+
+    def _include_server_fields(self):
+        """Include server-only fields when generating server call mappings."""
+        return self.context in ("ai", "both")
+
+    def _include_client_mappings(self):
+        """AI still needs client mappings; this is always true for generated outputs."""
+        return self.context in ("cl", "ai", "both")
 
     def generate_dc_interfaces(self):
         """Interfaces for all distributed classes (including structs)."""
@@ -129,6 +134,7 @@ class TypeScriptGenerator(GeneratorInterface):
             "Generating function parsing...",
             "fn",
             FunctionParsingTS,
+            include_server_fields=self._include_server_fields(),
         )
 
     def generate_mapping(self):
@@ -137,7 +143,23 @@ class TypeScriptGenerator(GeneratorInterface):
             "Generating mapping...",
             "fn",
             MappingTS,
+            include_server_fields=self._include_server_fields(),
+            include_remote_mappings=self._include_client_mappings(),
+            include_init_mappings=self._include_client_mappings(),
         )
+
+    def generate_dclasses(self):
+        """Server-side DC descriptors in generated/dclasses; dclasses.ts in otp/dc."""
+        self.notify.info("Generating DC server descriptors...")
+        class_files_path = self._out_path("dclasses")
+        otp_dc_path = Path().absolute() / self.outDir / "otp" / "dc"
+        otp_dc_path.mkdir(parents=True, exist_ok=True)
+        DClassesTS(
+            self.dc_loader,
+            class_files_path=class_files_path,
+            mapping_file_path=otp_dc_path,
+        ).write()
+        self.notify.info("Done!")
 
     def copy_static_files(self):
         self.notify.info("Copying static files...")

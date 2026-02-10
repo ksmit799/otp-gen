@@ -79,7 +79,9 @@ class StructPackingTS:
                     if elem_param_class:
                         # We have an array of classes.
                         class_name = elem_param_class.getClass().getName()
-                        packing += f"\t\t\tStructPacking.pack{class_name}(arrData, arrVal);\n"
+                        packing += (
+                            f"\t\t\tStructPacking.pack{class_name}(arrData, arrVal);\n"
+                        )
 
                     elif elem_param_simple:
                         # We have an array of generic types.

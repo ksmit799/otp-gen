@@ -47,7 +47,9 @@ def write_generated_file(out_path: Path, filename: str, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def format_ts_params_for_atomic_field(atomic_field, import_prefix: str, existing_imports: set, notify=None):
+def format_ts_params_for_atomic_field(
+    atomic_field, import_prefix: str, existing_imports: set, notify=None
+):
     """
     Build TypeScript parameter list and import lines for an atomic field's elements.
     Mutates existing_imports. Returns (params_string, imports_string).
@@ -71,7 +73,9 @@ def format_ts_params_for_atomic_field(atomic_field, import_prefix: str, existing
             class_name = elem_dc_class.getName()
             if class_name not in existing_imports:
                 existing_imports.add(class_name)
-                imports_lines.append(f'import {class_name} from "{import_prefix}{class_name}";\n')
+                imports_lines.append(
+                    f'import {class_name} from "{import_prefix}{class_name}";\n'
+                )
             params_parts.append(f"{elem_name}: {class_name}")
 
         elif elem_simple:
@@ -86,7 +90,9 @@ def format_ts_params_for_atomic_field(atomic_field, import_prefix: str, existing
                 class_name = elem_param_class.getClass().getName()
                 if class_name not in existing_imports:
                     existing_imports.add(class_name)
-                    imports_lines.append(f'import {class_name} from "{import_prefix}{class_name}";\n')
+                    imports_lines.append(
+                        f'import {class_name} from "{import_prefix}{class_name}";\n'
+                    )
                 params_parts.append(f"{elem_name}: {class_name}[]")
             else:
                 params_parts.append(

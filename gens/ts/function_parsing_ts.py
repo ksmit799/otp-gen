@@ -16,9 +16,10 @@ export default class FunctionParsing {{
 class FunctionParsingTS:
     notify = notify.new_category("FunctionParsingTS")
 
-    def __init__(self, dc_loader, out_path):
+    def __init__(self, dc_loader, out_path, include_server_fields=False):
         self.dcLoader = dc_loader
         self.outPath = out_path
+        self.includeServerFields = include_server_fields
         self.outBuffer = ""
 
         self._gen_buffer()
@@ -35,7 +36,7 @@ class FunctionParsingTS:
 
             for i in range(dc_class.get_num_fields()):
                 field = dc_class.get_field(i)
-                if is_server_field(field):
+                if not self.includeServerFields and is_server_field(field):
                     continue
 
                 static_out += f"\tpublic static call_{name}_{field.getName()}(dc_interface: I{name}, di: DatagramIterator): void {{\n"

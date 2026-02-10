@@ -91,7 +91,9 @@ class RemoteTS:
                     packing += f"\t\tReadHelper.writeArrayStatic(dg, {elem_name}, (arrData, arrVal) => {{\n"
                     if elem_param_class:
                         class_name = elem_param_class.getClass().getName()
-                        packing += f"\t\t\tStructPacking.pack{class_name}(arrData, arrVal);\n"
+                        packing += (
+                            f"\t\t\tStructPacking.pack{class_name}(arrData, arrVal);\n"
+                        )
                     else:
                         packing += f"\t\t\tarrData.add{get_formatted_subatomic_type(elem_param_simple.getType())}(arrVal);\n"
                     packing += "\t\t});\n"

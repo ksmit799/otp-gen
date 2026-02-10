@@ -3,8 +3,7 @@ from gens.ts.constants_ts import GENERATED_FILE_HEADER
 from gens.ts.util_ts import write_generated_file
 
 template = """{header}
-import ObjectInitialization from "./ObjectInitialization";
-import FunctionParsing from "./FunctionParsing";
+{objectInitImport}import FunctionParsing from "./FunctionParsing";
 {imports}
 
 export default class DCMapping {{
@@ -57,9 +56,19 @@ export default class DCMapping {{
 
 
 class MappingTS:
-    def __init__(self, dc_loader, out_path):
+    def __init__(
+        self,
+        dc_loader,
+        out_path,
+        include_server_fields=False,
+        include_remote_mappings=True,
+        include_init_mappings=True,
+    ):
         self.dcLoader = dc_loader
         self.outPath = out_path
+        self.includeServerFields = include_server_fields
+        self.includeRemoteMappings = include_remote_mappings
+        self.includeInitMappings = include_init_mappings
         self.outBuffer = ""
 
         self._gen_buffer()
@@ -78,17 +87,18 @@ class MappingTS:
             static_out += f'\t\tthis.id2class[{class_id}] = "{class_name}";\n'
 
             # Build class name to remote.
-            imports += f'import R{class_name} from "../remote/R{class_name}";\n'
-            static_out += f'\t\tthis.cls2rmccls["{class_name}"] = R{class_name};\n'
+            if self.includeRemoteMappings:
+                imports += f'import R{class_name} from "../remote/R{class_name}";\n'
+                static_out += f'\t\tthis.cls2rmccls["{class_name}"] = R{class_name};\n'
 
             # Build function mapping.
             owner_init = False
             for i in range(dc_class.get_num_fields()):
                 field = dc_class.get_field(i)
-                if is_server_field(field):
+                if not self.includeServerFields and is_server_field(field):
                     continue
 
-                if not owner_init:
+                if self.includeInitMappings and not owner_init:
                     # We only need at least one owner init field to mark this.
                     owner_init = has_owner_init(field)
 
@@ -98,9 +108,10 @@ class MappingTS:
                 )
                 static_out += f"\t\tthis.fnid2clsname[{field.getNumber()}] = this.id2class[{class_id}];\n"
 
-            static_out += f'\t\tthis.cls2initfn["{class_name}"] = ObjectInitialization.init{class_name};\n'
-            static_out += f'\t\tthis.cls2owninitfn["{class_name}"] = ObjectInitialization.init{class_name}'
-            static_out += f'{"_ownrecv" if owner_init else ""};\n'
+            if self.includeInitMappings:
+                static_out += f'\t\tthis.cls2initfn["{class_name}"] = ObjectInitialization.init{class_name};\n'
+                static_out += f'\t\tthis.cls2owninitfn["{class_name}"] = ObjectInitialization.init{class_name}'
+                static_out += f'{"_ownrecv" if owner_init else ""};\n'
 
         if imports:
             # Trim off newline.
@@ -108,6 +119,11 @@ class MappingTS:
 
         self.outBuffer = template.format(
             header=GENERATED_FILE_HEADER,
+            objectInitImport=(
+                'import ObjectInitialization from "./ObjectInitialization";\n'
+                if self.includeInitMappings
+                else ""
+            ),
             dcHash=self.dcLoader.hash_value,
             imports=imports,
         )
