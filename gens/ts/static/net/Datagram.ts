@@ -112,6 +112,14 @@ export default class Datagram {
         this.bufferIndex += bytes.byteLength;
     }
 
+    public appendData(arg: ArrayBufferView) {
+        const bytes = new Uint8Array(arg.buffer, arg.byteOffset, arg.byteLength);
+        this.ensureLength(bytes.byteLength);
+
+        new Uint8Array(this.buffer, this.bufferIndex, bytes.byteLength).set(bytes);
+        this.bufferIndex += bytes.byteLength;
+    }
+
     public addChannel(channel: number) {
         this.addUint64(BigInt(channel));
     }

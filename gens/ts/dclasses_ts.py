@@ -1,5 +1,5 @@
 from gens.ts.constants_ts import GENERATED_FILE_HEADER
-from gens.ts.util_ts import write_generated_file
+from gens.ts.util_ts import write_generated_file, get_ts_type_for_subatomic_type
 from src.notifier import notify
 from src.util import get_formatted_subatomic_type
 
@@ -43,11 +43,14 @@ class DClassesTS:
 
             imports = ""
             imports += 'import type { DCFieldInfo } from "../../otp/dc/dclasses";\n'
+            imports += 'import Datagram from "../../otp/net/Datagram";\n'
             imports += (
                 'import DatagramIterator from "../../otp/net/DatagramIterator";\n'
             )
             imports += 'import ReadHelper from "../../otp/net/ReadHelper";\n'
             imports += 'import StructParsing from "../fn/StructParsing";\n'
+            imports += 'import StructPacking from "../fn/StructPacking";\n'
+            existing_imports = set()
 
             # Build field metadata maps.
             fields_by_id_lines = []
@@ -76,6 +79,8 @@ class DClassesTS:
 
             # Build decode switch cases.
             decode_cases_lines = []
+            # Build encode switch cases.
+            encode_cases_lines = []
             for i in range(dc_class.get_num_fields()):
                 field = dc_class.get_field(i)
                 field_id = field.getNumber()
@@ -87,8 +92,15 @@ class DClassesTS:
                 decode_cases_lines.append(f"\t\t\tcase {field_id}: {{")
                 decode_cases_lines.append("\t\t\t\tconst args: any[] = [];")
 
+                encode_cases_lines.append(f"\t\t\tcase {field_id}: {{")
+                encode_arg_index = 0
+
                 if molecular_field:
-                    # Molecular field: delegate to underlying atomic fields and flatten.
+                    # TODO: Implement encoding for molecular fields if needed.
+                    self.notify.warning(
+                        f"Skipping encode for molecular field {class_name}.{field.getName()} (unimplemented)."
+                    )
+
                     for k in range(molecular_field.getNumAtomics()):
                         atomic = molecular_field.getAtomic(k)
                         decode_cases_lines.append(
@@ -111,10 +123,19 @@ class DClassesTS:
                                     f"Got non-struct class as field param: {class_name} - {elem_dc_class.getName()}"
                                 )
                                 continue
+                            struct_ts_name = elem_dc_class.getName()
+                            if struct_ts_name not in existing_imports:
+                                imports += f'import {struct_ts_name} from "../dc/{struct_ts_name}";\n'
+                                existing_imports.add(struct_ts_name)
+                            decode_cases_lines.append(
+                                f"\t\t\t\targs.push(StructParsing.get{elem_dc_class.getName()}(di));"
+                            )
 
-                                decode_cases_lines.append(
-                                    f"\t\t\t\targs.push(StructParsing.get{elem_dc_class.getName()}(di));"
-                                )
+                            # Encode: struct element.
+                            encode_cases_lines.append(
+                                f"\t\t\t\tStructPacking.pack{elem_dc_class.getName()}(dg, args[{encode_arg_index}] as {elem_dc_class.getName()});"
+                            )
+                            encode_arg_index += 1
 
                         if elem_simple:
                             elem_type = elem_simple.getType()
@@ -123,6 +144,7 @@ class DClassesTS:
                             )
                             is_uint_array = "Array" in elem_type_formatted
 
+                            # Decode simple element.
                             if is_uint_array:
                                 elem_type_formatted = elem_type_formatted.replace(
                                     "Array", ""
@@ -138,6 +160,29 @@ class DClassesTS:
                                 decode_cases_lines.append(
                                     f"\t\t\t\targs.push(di.get{elem_type_formatted}());"
                                 )
+
+                            # Encode simple element.
+                            ts_type = get_ts_type_for_subatomic_type(elem_type)
+                            elem_type_formatted_enc = get_formatted_subatomic_type(
+                                elem_type
+                            )
+                            is_uint_array_enc = "Array" in elem_type_formatted_enc
+
+                            if is_uint_array_enc:
+                                base_type = elem_type_formatted_enc.replace("Array", "")
+                                encode_cases_lines.append(
+                                    f"\t\t\t\tReadHelper.writeArrayStatic(dg, args[{encode_arg_index}] as {ts_type}, (arrData, arrVal) => {{"
+                                )
+                                encode_cases_lines.append(
+                                    f"\t\t\t\t\tarrData.add{base_type}(arrVal);"
+                                )
+                                encode_cases_lines.append("\t\t\t\t});")
+                            else:
+                                encode_cases_lines.append(
+                                    f"\t\t\t\tdg.add{elem_type_formatted_enc}(args[{encode_arg_index}] as {ts_type});"
+                                )
+
+                            encode_arg_index += 1
 
                         elif elem_array:
                             elem_param_simple = (
@@ -162,6 +207,33 @@ class DClassesTS:
 
                             decode_cases_lines.append("\t\t\t\t}));")
 
+                            # Encode: array element.
+                            encode_cases_lines.append(
+                                f"\t\t\t\tReadHelper.writeArrayStatic(dg, args[{encode_arg_index}] as "
+                                + (
+                                    f"{get_ts_type_for_subatomic_type(elem_param_simple.getType())}[]"
+                                    if elem_param_simple
+                                    else f"{elem_param_class.getClass().getName()}[]"
+                                )
+                                + ", (arrData, arrVal) => {"
+                            )
+
+                            if elem_param_class:
+                                class_name_arr = elem_param_class.getClass().getName()
+                                if class_name_arr not in existing_imports:
+                                    imports += f'import {class_name_arr} from "../dc/{class_name_arr}";\n'
+                                    existing_imports.add(class_name_arr)
+                                encode_cases_lines.append(
+                                    f"\t\t\t\t\tStructPacking.pack{class_name_arr}(arrData, arrVal);"
+                                )
+                            elif elem_param_simple:
+                                encode_cases_lines.append(
+                                    f"\t\t\t\t\tarrData.add{get_formatted_subatomic_type(elem_param_simple.getType())}(arrVal);"
+                                )
+
+                            encode_cases_lines.append("\t\t\t\t});")
+                            encode_arg_index += 1
+
                 elif dc_parameter:
                     # Simple parameter field; currently not expected in typical OTP DC usage.
                     self.notify.warning(
@@ -175,8 +247,11 @@ class DClassesTS:
 
                 decode_cases_lines.append("\t\t\t\treturn args;")
                 decode_cases_lines.append("\t\t\t}")
+                encode_cases_lines.append("\t\t\t\treturn;")
+                encode_cases_lines.append("\t\t\t}")
 
             decode_cases = "\n".join(decode_cases_lines)
+            encode_cases = "\n".join(encode_cases_lines)
 
             class_template = """{header}
 {imports}
@@ -208,6 +283,15 @@ export default class DC{className} {{
             }}
         }}
     }}
+    
+    public static encodeField(id: number, dg: Datagram, args: any[]): void {{
+        switch (id) {{
+{encodeCases}
+            default: {{
+                throw new Error(`Unknown field id ${{id}} for class {className}`);
+            }}
+        }}
+    }}
 }}
 """
 
@@ -219,6 +303,7 @@ export default class DC{className} {{
                 fieldsById=fields_by_id,
                 fieldsByName=fields_by_name,
                 decodeCases=decode_cases,
+                encodeCases=encode_cases,
             )
 
             write_generated_file(self.classFilesPath, f"DC{class_name}.ts", out_buffer)
@@ -255,22 +340,34 @@ export interface DCFieldInfo {{
     keywords: string[];
 }}
 
+import Datagram from "../net/Datagram";
+import DatagramIterator from "../net/DatagramIterator";
+
+export interface DCClassDescriptor {{
+    readonly CLASS_ID: number;
+    readonly CLASS_NAME: string;
+    getFieldById(id: number): DCFieldInfo | undefined;
+    getFieldByName(name: string): DCFieldInfo | undefined;
+    decodeField(id: number, di: DatagramIterator): any[];
+    encodeField(id: number, dg: Datagram, args: any[]): void;
+}}
+
 {imports}
 
 export default class DClasses {{
-    private static readonly byId: {{ [id: number]: any }} = {{
+    private static readonly byId: {{ [id: number]: DCClassDescriptor }} = {{
 {byId}
     }};
 
-    private static readonly byName: {{ [name: string]: any }} = {{
+    private static readonly byName: {{ [name: string]: DCClassDescriptor }} = {{
 {byName}
     }};
 
-    public static getById(id: number): any | undefined {{
+    public static getById(id: number): DCClassDescriptor | undefined {{
         return this.byId[id];
     }}
 
-    public static getByName(name: string): any | undefined {{
+    public static getByName(name: string): DCClassDescriptor | undefined {{
         return this.byName[name];
     }}
 }}
