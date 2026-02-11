@@ -23,6 +23,7 @@ class TypeScriptGenerator(GeneratorInterface):
 
         self.cleanup_out_dir()
 
+        # Always generate the client-side / shared artifacts first.
         self.generate_dc_interfaces()
         self.generate_remote_interfaces()
         self.generate_remotes()
@@ -32,10 +33,13 @@ class TypeScriptGenerator(GeneratorInterface):
         self.generate_function_parsing()
         self.generate_mapping()
 
+        # Copy static runtime files.
+        self.copy_static_files()
+
+        # Then generate server-side descriptors into otp/dc and generated/dclasses,
+        # so they are not wiped out by the static copy.
         if self.context in ["ai", "both"]:
             self.generate_dclasses()
-
-        self.copy_static_files()
 
         self.notify.info(f"Finished building!")
 

@@ -64,10 +64,11 @@ class DClassesTS:
                 keywords_str = ", ".join(keywords)
 
                 fields_by_id_lines.append(
-                    f'        {field_id}: {{ id: {field_id}, name: "{field_name}", keywords: [{keywords_str}] }},'
+                    f'\t\t{field_id}: {{ id: {field_id}, name: "{field_name}", keywords: [{keywords_str}] }},'
                 )
+                # Point to the already-defined _fieldsById entry rather than duplicating.
                 fields_by_name_lines.append(
-                    f'        "{field_name}": {{ id: {field_id}, name: "{field_name}", keywords: [{keywords_str}] }},'
+                    f'\t\t"{field_name}": DC{class_name}._fieldsById[{field_id}],'
                 )
 
             fields_by_id = "\n".join(fields_by_id_lines)
@@ -83,15 +84,15 @@ class DClassesTS:
                 atomic_field = field.asAtomicField()
                 dc_parameter = field.asParameter()
 
-                decode_cases_lines.append(f"            case {field_id}: {{")
-                decode_cases_lines.append("                const args: any[] = [];")
+                decode_cases_lines.append(f"\t\t\tcase {field_id}: {{")
+                decode_cases_lines.append("\t\t\t\tconst args: any[] = [];")
 
                 if molecular_field:
                     # Molecular field: delegate to underlying atomic fields and flatten.
                     for k in range(molecular_field.getNumAtomics()):
                         atomic = molecular_field.getAtomic(k)
                         decode_cases_lines.append(
-                            f"                args.push(...DC{class_name}.decodeField({atomic.getNumber()}, di));"
+                            f"\t\t\t\targs.push(...DC{class_name}.decodeField({atomic.getNumber()}, di));"
                         )
 
                 elif atomic_field:
@@ -111,9 +112,9 @@ class DClassesTS:
                                 )
                                 continue
 
-                            decode_cases_lines.append(
-                                f"                args.push(StructParsing.get{elem_dc_class.getName()}(di));"
-                            )
+                                decode_cases_lines.append(
+                                    f"\t\t\t\targs.push(StructParsing.get{elem_dc_class.getName()}(di));"
+                                )
 
                         if elem_simple:
                             elem_type = elem_simple.getType()
@@ -127,15 +128,15 @@ class DClassesTS:
                                     "Array", ""
                                 )
                                 decode_cases_lines.append(
-                                    "                args.push(ReadHelper.readArrayStatic(di, (arrayData) => {"
+                                    "\t\t\t\targs.push(ReadHelper.readArrayStatic(di, (arrayData) => {"
                                 )
                                 decode_cases_lines.append(
-                                    f"                    return arrayData.get{elem_type_formatted}();"
+                                    f"\t\t\t\t\treturn arrayData.get{elem_type_formatted}();"
                                 )
-                                decode_cases_lines.append("                }));")
+                                decode_cases_lines.append("\t\t\t\t}));")
                             else:
                                 decode_cases_lines.append(
-                                    f"                args.push(di.get{elem_type_formatted}());"
+                                    f"\t\t\t\targs.push(di.get{elem_type_formatted}());"
                                 )
 
                         elif elem_array:
@@ -147,19 +148,19 @@ class DClassesTS:
                             )
 
                             decode_cases_lines.append(
-                                "                args.push(ReadHelper.readArrayStatic(di, (arrayData) => {"
+                                "\t\t\t\targs.push(ReadHelper.readArrayStatic(di, (arrayData) => {"
                             )
 
                             if elem_param_simple:
                                 decode_cases_lines.append(
-                                    f"                    return arrayData.get{get_formatted_subatomic_type(elem_param_simple.getType())}();"
+                                    f"\t\t\t\t\treturn arrayData.get{get_formatted_subatomic_type(elem_param_simple.getType())}();"
                                 )
                             else:
                                 decode_cases_lines.append(
-                                    f"                    return StructParsing.get{elem_param_class.getClass().getName()}(arrayData);"
+                                    f"\t\t\t\t\treturn StructParsing.get{elem_param_class.getClass().getName()}(arrayData);"
                                 )
 
-                            decode_cases_lines.append("                }));")
+                            decode_cases_lines.append("\t\t\t\t}));")
 
                 elif dc_parameter:
                     # Simple parameter field; currently not expected in typical OTP DC usage.
@@ -172,8 +173,8 @@ class DClassesTS:
                         f"Failed to parse field {field.getName()} for decode generation!"
                     )
 
-                decode_cases_lines.append("                return args;")
-                decode_cases_lines.append("            }")
+                decode_cases_lines.append("\t\t\t\treturn args;")
+                decode_cases_lines.append("\t\t\t}")
 
             decode_cases = "\n".join(decode_cases_lines)
 
