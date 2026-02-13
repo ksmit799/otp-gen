@@ -64,7 +64,13 @@ class StructPackingTS:
 
                 elif dc_param_simple:
                     elem_type = dc_param_simple.getType()
-                    packing += f"\t\tdg.add{get_formatted_subatomic_type(elem_type)}(arg.{dc_param_simple.getName()});\n"
+                    enc_fmt = get_formatted_subatomic_type(elem_type)
+                    if enc_fmt == "Char":
+                        packing += f"\t\tdg.addUint8((arg.{dc_param_simple.getName()}).charCodeAt(0));\n"
+                    else:
+                        packing += (
+                            f"\t\tdg.add{enc_fmt}(arg.{dc_param_simple.getName()});\n"
+                        )
 
                 elif dc_param_array:
                     elem_param_simple = (
@@ -84,8 +90,14 @@ class StructPackingTS:
                         )
 
                     elif elem_param_simple:
-                        # We have an array of generic types.
-                        packing += f"\t\t\tarrData.add{get_formatted_subatomic_type(elem_param_simple.getType())}(arrVal);\n"
+                        # We have an array of generic types. Char packs as Uint8.
+                        enc_fmt = get_formatted_subatomic_type(
+                            elem_param_simple.getType()
+                        )
+                        if enc_fmt == "Char":
+                            packing += "\t\t\tarrData.addUint8((arrVal as string).charCodeAt(0));\n"
+                        else:
+                            packing += f"\t\t\tarrData.add{enc_fmt}(arrVal);\n"
 
                     packing += "\t\t});\n"
 

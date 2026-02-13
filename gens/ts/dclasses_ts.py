@@ -178,9 +178,14 @@ class DClassesTS:
                                 )
                                 encode_cases_lines.append("\t\t\t\t});")
                             else:
-                                encode_cases_lines.append(
-                                    f"\t\t\t\tdg.add{elem_type_formatted_enc}(args[{encode_arg_index}] as {ts_type});"
-                                )
+                                if elem_type_formatted_enc == "Char":
+                                    encode_cases_lines.append(
+                                        f"\t\t\t\tdg.addUint8((args[{encode_arg_index}] as string).charCodeAt(0));"
+                                    )
+                                else:
+                                    encode_cases_lines.append(
+                                        f"\t\t\t\tdg.add{elem_type_formatted_enc}(args[{encode_arg_index}] as {ts_type});"
+                                    )
 
                             encode_arg_index += 1
 
@@ -227,9 +232,17 @@ class DClassesTS:
                                     f"\t\t\t\t\tStructPacking.pack{class_name_arr}(arrData, arrVal);"
                                 )
                             elif elem_param_simple:
-                                encode_cases_lines.append(
-                                    f"\t\t\t\t\tarrData.add{get_formatted_subatomic_type(elem_param_simple.getType())}(arrVal);"
+                                enc_fmt = get_formatted_subatomic_type(
+                                    elem_param_simple.getType()
                                 )
+                                if enc_fmt == "Char":
+                                    encode_cases_lines.append(
+                                        "\t\t\t\t\tarrData.addUint8((arrVal as string).charCodeAt(0));"
+                                    )
+                                else:
+                                    encode_cases_lines.append(
+                                        f"\t\t\t\t\tarrData.add{enc_fmt}(arrVal);"
+                                    )
 
                             encode_cases_lines.append("\t\t\t\t});")
                             encode_arg_index += 1
@@ -326,8 +339,8 @@ export default class DC{className} {{
             imports_lines.append(
                 f'import DC{class_name} from "../../generated/dclasses/DC{class_name}";'
             )
-            by_id_lines.append(f"        {class_id}: DC{class_name},")
-            by_name_lines.append(f'        "{class_name}": DC{class_name},')
+            by_id_lines.append(f"\t\t{class_id}: DC{class_name},")
+            by_name_lines.append(f"\t\t{class_name}: DC{class_name},")
 
         imports = "\n".join(imports_lines)
         by_id = "\n".join(by_id_lines)
@@ -355,11 +368,11 @@ export interface DCClassDescriptor {{
 {imports}
 
 export default class DClasses {{
-    private static readonly byId: {{ [id: number]: DCClassDescriptor }} = {{
+    private static readonly byId: {{[id: number]: DCClassDescriptor}} = {{
 {byId}
     }};
 
-    private static readonly byName: {{ [name: string]: DCClassDescriptor }} = {{
+    private static readonly byName: {{[name: string]: DCClassDescriptor}} = {{
 {byName}
     }};
 

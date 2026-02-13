@@ -216,7 +216,7 @@ export default class OTPClientRepository {
         parentId: number,
         zoneId: number,
         owner: boolean,
-        di: DatagramIterator
+        di: DatagramIterator,
     ) {
         console.log(`[DC] Creating distObj... DoId: ${doId}, Parent: ${parentId}, Zone: ${zoneId}, Class: ${classId}`);
 

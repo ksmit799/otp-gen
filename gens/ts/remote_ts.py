@@ -80,10 +80,22 @@ class RemoteTS:
                     if is_uint_array:
                         elem_type_formatted = elem_type_formatted.replace("Array", "")
                         packing += f"\t\tReadHelper.writeArrayStatic(dg, {elem_name}, (arrData, arrVal) => {{\n"
-                        packing += f"\t\t\tarrData.add{elem_type_formatted}(arrVal);\n"
+                        if elem_type_formatted == "Char":
+                            packing += "\t\t\tarrData.addUint8((arrVal as string).charCodeAt(0));\n"
+                        else:
+                            packing += (
+                                f"\t\t\tarrData.add{elem_type_formatted}(arrVal);\n"
+                            )
                         packing += "\t\t});\n"
                     else:
-                        packing += f"\t\tdg.add{elem_type_formatted}({elem_name});\n"
+                        if elem_type_formatted == "Char":
+                            packing += (
+                                f"\t\tdg.addUint8(({elem_name}).charCodeAt(0));\n"
+                            )
+                        else:
+                            packing += (
+                                f"\t\tdg.add{elem_type_formatted}({elem_name});\n"
+                            )
 
                 elif elem_array:
                     elem_param_simple = elem_array.getElementType().asSimpleParameter()
@@ -95,7 +107,13 @@ class RemoteTS:
                             f"\t\t\tStructPacking.pack{class_name}(arrData, arrVal);\n"
                         )
                     else:
-                        packing += f"\t\t\tarrData.add{get_formatted_subatomic_type(elem_param_simple.getType())}(arrVal);\n"
+                        enc_fmt = get_formatted_subatomic_type(
+                            elem_param_simple.getType()
+                        )
+                        if enc_fmt == "Char":
+                            packing += "\t\t\tarrData.addUint8((arrVal as string).charCodeAt(0));\n"
+                        else:
+                            packing += f"\t\t\tarrData.add{enc_fmt}(arrVal);\n"
                     packing += "\t\t});\n"
 
                 arg_index += 1
