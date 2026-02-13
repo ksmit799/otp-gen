@@ -6,6 +6,8 @@
 export default class DatagramIterator {
     private buffer: ArrayBuffer;
     private bufferIndex: number;
+    private serverSender: bigint = BigInt(0);
+    private serverChannels: bigint[] = [];
 
     constructor(data: ArrayBuffer) {
         this.buffer = data;
@@ -16,6 +18,20 @@ export default class DatagramIterator {
         if (this.bufferIndex + size > this.buffer.byteLength) {
             throw new Error("[DC] DG read exceeds max length!");
         }
+    }
+
+    /**
+     * N.B. This is used on the server to record who sent us this datagram.
+     * Because we're in async space, it's not possible to have a global "getMsgSender()" function
+     * like the python repositories do.
+     */
+    public setServerChannels(senderChannel: bigint, channels: bigint[]) {
+        this.serverSender = senderChannel;
+        this.serverChannels = channels;
+    }
+
+    public getMsgSender() {
+        return this.serverSender;
     }
 
     public getUint8(): number {

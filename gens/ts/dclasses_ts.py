@@ -42,7 +42,7 @@ class DClassesTS:
             self.notify.debug(f"Generating DC descriptor for '{class_name}'")
 
             imports = ""
-            imports += 'import type { DCFieldInfo } from "../../otp/dc/dclasses";\n'
+            imports += 'import type {DCFieldInfo} from "../../otp/dc/dclasses";\n'
             imports += 'import Datagram from "../../otp/net/Datagram";\n'
             imports += (
                 'import DatagramIterator from "../../otp/net/DatagramIterator";\n'
@@ -56,8 +56,8 @@ class DClassesTS:
             fields_by_id_lines = []
             fields_by_name_lines = []
 
-            for i in range(dc_class.get_num_fields()):
-                field = dc_class.get_field(i)
+            for i in range(dc_class.get_num_inherited_fields()):
+                field = dc_class.get_inherited_field(i)
                 field_id = field.getNumber()
                 field_name = field.getName()
 
@@ -67,7 +67,7 @@ class DClassesTS:
                 keywords_str = ", ".join(keywords)
 
                 fields_by_id_lines.append(
-                    f'\t\t{field_id}: {{ id: {field_id}, name: "{field_name}", keywords: [{keywords_str}] }},'
+                    f'\t\t{field_id}: {{id: {field_id}, name: "{field_name}", keywords: [{keywords_str}]}},'
                 )
                 # Point to the already-defined _fieldsById entry rather than duplicating.
                 fields_by_name_lines.append(
@@ -81,8 +81,8 @@ class DClassesTS:
             decode_cases_lines = []
             # Build encode switch cases.
             encode_cases_lines = []
-            for i in range(dc_class.get_num_fields()):
-                field = dc_class.get_field(i)
+            for i in range(dc_class.get_num_inherited_fields()):
+                field = dc_class.get_inherited_field(i)
                 field_id = field.getNumber()
 
                 molecular_field = field.asMolecularField()
@@ -272,11 +272,11 @@ export default class DC{className} {{
     public static readonly CLASS_ID: number = {classId};
     public static readonly CLASS_NAME: string = "{className}";
 
-    private static readonly _fieldsById: {{ [id: number]: DCFieldInfo }} = {{
+    private static readonly _fieldsById: {{[id: number]: DCFieldInfo}} = {{
 {fieldsById}
     }};
 
-    private static readonly _fieldsByName: {{ [name: string]: DCFieldInfo }} = {{
+    private static readonly _fieldsByName: {{[name: string]: DCFieldInfo}} = {{
 {fieldsByName}
     }};
 
