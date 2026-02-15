@@ -34,7 +34,7 @@ class StructParsingTS:
             static_out += (
                 f"\tpublic static get{name}(di: DatagramIterator): {name} {{\n"
             )
-            static_out += f"\t\tconst obj = new {name}();\n"
+            ctor_args = []
 
             for i in range(dc_class.get_num_fields()):
                 field = dc_class.get_field(i)
@@ -50,38 +50,38 @@ class StructParsingTS:
                 dc_param_array = dc_parameter.asArrayParameter()
 
                 if dc_param_class:
-                    # This is (always?) a struct arg.
                     elem_dc_class = dc_param_class.getClass()
                     if not elem_dc_class.isStruct():
                         self.notify.warning(
                             f"Got non-struct class as field param: {name} - {elem_dc_class.getName()}"
                         )
                         continue
-
-                    static_out += f"\t\tobj.{field.getName()} = StructParsing.get{elem_dc_class.getName()}(di);\n"
+                    ctor_args.append(f"StructParsing.get{elem_dc_class.getName()}(di)")
 
                 elif dc_param_simple:
-                    static_out += f"\t\tobj.{field.getName()} = di.get{get_formatted_subatomic_type(dc_param_simple.getType())}();\n"
+                    ctor_args.append(
+                        f"di.get{get_formatted_subatomic_type(dc_param_simple.getType())}()"
+                    )
 
                 elif dc_param_array:
-                    static_out += f"\t\tobj.{field.getName()} = ReadHelper.readArrayStatic(di, (arrayData) => {{\n"
-
-                    # TODO: Can we have multi-dimensional arrays?
                     elem_param_simple = (
                         dc_param_array.getElementType().asSimpleParameter()
                     )
                     elem_param_class = (
                         dc_param_array.getElementType().asClassParameter()
                     )
+                    arr_inner = (
+                        f"arrayData.get{get_formatted_subatomic_type(elem_param_simple.getType())}()"
+                        if elem_param_simple
+                        else f"StructParsing.get{elem_param_class.getClass().getName()}(arrayData)"
+                    )
+                    ctor_args.append(
+                        f"ReadHelper.readArrayStatic(di, (arrayData) => {{\n\t\t\t\treturn {arr_inner};\n\t\t\t}})"
+                    )
 
-                    if elem_param_simple:
-                        static_out += f"\t\t\treturn arrayData.get{get_formatted_subatomic_type(elem_param_simple.getType())}();\n"
-                    elif elem_param_class:
-                        static_out += f"\t\t\treturn StructParsing.get{elem_param_class.getClass().getName()}(arrayData);\n"
-
-                    static_out += "\t\t});\n"
-
-            static_out += "\t\treturn obj;\n"
+            static_out += "\t\treturn new " + name + "(\n\t\t\t"
+            static_out += ",\n\t\t\t".join(ctor_args)
+            static_out += "\n\t\t);\n"
             static_out += "\t}\n\n"
 
         if imports:

@@ -10,7 +10,13 @@ from src.util import is_server_field
 struct_template = """{header}
 {imports}
 export default class {className} {{
-{fields}
+{fieldDeclarations}
+
+    constructor(
+{constructorParams}
+    ) {{
+{constructorAssignments}
+    }}
 }}
 """
 
@@ -42,8 +48,10 @@ class DCInterfaceTS:
 
         imports = ""
         existing_imports = set()
+        field_declarations = []
+        constructor_params = []
+        constructor_assignments = []
 
-        fields = ""
         for i in range(self.dclass.get_num_fields()):
             field = self.dclass.get_field(i)
             dc_parameter = field.asParameter()
@@ -53,51 +61,56 @@ class DCInterfaceTS:
                 )
                 continue
 
-            fields += f"\tpublic {field.getName()}!: "
-
+            param_name = field.getName()
             dc_param_simple = dc_parameter.asSimpleParameter()
             dc_param_class = dc_parameter.asClassParameter()
             dc_param_array = dc_parameter.asArrayParameter()
 
             if dc_param_simple:
-                # We have a simple generic type parameter.
-                fields += (
-                    f"{get_ts_type_for_subatomic_type(dc_param_simple.getType())};\n"
-                )
+                ts_type = get_ts_type_for_subatomic_type(dc_param_simple.getType())
+                field_declarations.append(f"\tpublic {param_name}!: {ts_type};")
+                constructor_params.append(f"\t\t{param_name}: {ts_type}")
+                constructor_assignments.append(f"\t\tthis.{param_name} = {param_name};")
             elif dc_param_class:
-                # We have a singular class parameter.
                 class_name = dc_param_class.getClass().getName()
                 if class_name not in existing_imports:
                     imports += f'import {class_name} from "./{class_name}";\n'
                     existing_imports.add(class_name)
-
-                fields += f"{class_name};\n"
+                field_declarations.append(f"\tpublic {param_name}!: {class_name};")
+                constructor_params.append(f"\t\t{param_name}: {class_name}")
+                constructor_assignments.append(f"\t\tthis.{param_name} = {param_name};")
             else:
-                # We have an array of *something*.
                 elem_param_simple = dc_param_array.getElementType().asSimpleParameter()
                 elem_param_class = dc_param_array.getElementType().asClassParameter()
 
                 if elem_param_class:
-                    # We have an array of classes.
                     class_name = elem_param_class.getClass().getName()
                     if class_name not in existing_imports:
                         imports += f'import {class_name} from "./{class_name}";\n'
                         existing_imports.add(class_name)
-
-                    fields += f"{class_name}[];\n"
+                    field_declarations.append(
+                        f"\tpublic {param_name}!: {class_name}[];"
+                    )
+                    constructor_params.append(f"\t\t{param_name}: {class_name}[]")
                 else:
-                    # We have an array of generic types.
-                    fields += f"{get_ts_type_for_subatomic_type(elem_param_simple.getType())}[];\n"
+                    ts_type = get_ts_type_for_subatomic_type(
+                        elem_param_simple.getType()
+                    )
+                    field_declarations.append(f"\tpublic {param_name}!: {ts_type}[];")
+                    constructor_params.append(f"\t\t{param_name}: {ts_type}[]")
+                constructor_assignments.append(f"\t\tthis.{param_name} = {param_name};")
 
-        if fields:
-            # Chop off our last char (\n)
-            fields = fields[:-1]
+        field_declarations_str = "\n".join(field_declarations)
+        constructor_params_str = ",\n".join(constructor_params)
+        constructor_assignments_str = "\n".join(constructor_assignments)
 
         self.outBuffer = struct_template.format(
             header=GENERATED_FILE_HEADER,
             className=self.name,
             imports=imports,
-            fields=fields,
+            fieldDeclarations=field_declarations_str,
+            constructorParams=constructor_params_str,
+            constructorAssignments=constructor_assignments_str,
         )
 
     def _gen_class_buffer(self):

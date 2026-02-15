@@ -248,10 +248,110 @@ class DClassesTS:
                             encode_arg_index += 1
 
                 elif dc_parameter:
-                    # Simple parameter field; currently not expected in typical OTP DC usage.
-                    self.notify.warning(
-                        f"Skipping simple-parameter field (unimplemented decode) {class_name} - {field.getName()}"
-                    )
+                    # Simple parameter field (e.g. uint32 MyField or uint32 MyField[]).
+                    dc_param_simple = dc_parameter.asSimpleParameter()
+                    dc_param_array = dc_parameter.asArrayParameter()
+
+                    if dc_param_simple:
+                        elem_type = dc_param_simple.getType()
+                        elem_type_formatted = get_formatted_subatomic_type(elem_type)
+                        is_uint_array = "Array" in elem_type_formatted
+
+                        if is_uint_array:
+                            elem_type_formatted = elem_type_formatted.replace(
+                                "Array", ""
+                            )
+                            decode_cases_lines.append(
+                                "\t\t\t\targs.push(ReadHelper.readArrayStatic(di, (arrayData) => {"
+                            )
+                            decode_cases_lines.append(
+                                f"\t\t\t\t\treturn arrayData.get{elem_type_formatted}();"
+                            )
+                            decode_cases_lines.append("\t\t\t\t}));")
+                        else:
+                            decode_cases_lines.append(
+                                f"\t\t\t\targs.push(di.get{elem_type_formatted}());"
+                            )
+
+                        ts_type = get_ts_type_for_subatomic_type(elem_type)
+                        enc_fmt = get_formatted_subatomic_type(elem_type)
+                        if is_uint_array:
+                            base_type = enc_fmt.replace("Array", "")
+                            encode_cases_lines.append(
+                                f"\t\t\t\tReadHelper.writeArrayStatic(dg, args[{encode_arg_index}] as {ts_type}, (arrData, arrVal) => {{"
+                            )
+                            if enc_fmt == "Char":
+                                encode_cases_lines.append(
+                                    "\t\t\t\t\tarrData.addUint8((arrVal as string).charCodeAt(0));"
+                                )
+                            else:
+                                encode_cases_lines.append(
+                                    f"\t\t\t\t\tarrData.add{base_type}(arrVal);"
+                                )
+                            encode_cases_lines.append("\t\t\t\t});")
+                        else:
+                            if enc_fmt == "Char":
+                                encode_cases_lines.append(
+                                    f"\t\t\t\tdg.addUint8((args[{encode_arg_index}] as string).charCodeAt(0));"
+                                )
+                            else:
+                                encode_cases_lines.append(
+                                    f"\t\t\t\tdg.add{enc_fmt}(args[{encode_arg_index}] as {ts_type});"
+                                )
+                        encode_arg_index += 1
+
+                    elif dc_param_array:
+                        elem_param_simple = (
+                            dc_param_array.getElementType().asSimpleParameter()
+                        )
+                        elem_param_class = (
+                            dc_param_array.getElementType().asClassParameter()
+                        )
+
+                        decode_cases_lines.append(
+                            "\t\t\t\targs.push(ReadHelper.readArrayStatic(di, (arrayData) => {"
+                        )
+                        if elem_param_simple:
+                            decode_cases_lines.append(
+                                f"\t\t\t\t\treturn arrayData.get{get_formatted_subatomic_type(elem_param_simple.getType())}();"
+                            )
+                        else:
+                            decode_cases_lines.append(
+                                f"\t\t\t\t\treturn StructParsing.get{elem_param_class.getClass().getName()}(arrayData);"
+                            )
+                        decode_cases_lines.append("\t\t\t\t}));")
+
+                        encode_cases_lines.append(
+                            f"\t\t\t\tReadHelper.writeArrayStatic(dg, args[{encode_arg_index}] as "
+                            + (
+                                f"{get_ts_type_for_subatomic_type(elem_param_simple.getType())}[]"
+                                if elem_param_simple
+                                else f"{elem_param_class.getClass().getName()}[]"
+                            )
+                            + ", (arrData, arrVal) => {"
+                        )
+                        if elem_param_class:
+                            class_name_arr = elem_param_class.getClass().getName()
+                            if class_name_arr not in existing_imports:
+                                imports += f'import {class_name_arr} from "../dc/{class_name_arr}";\n'
+                                existing_imports.add(class_name_arr)
+                            encode_cases_lines.append(
+                                f"\t\t\t\t\tStructPacking.pack{class_name_arr}(arrData, arrVal);"
+                            )
+                        elif elem_param_simple:
+                            enc_fmt = get_formatted_subatomic_type(
+                                elem_param_simple.getType()
+                            )
+                            if enc_fmt == "Char":
+                                encode_cases_lines.append(
+                                    "\t\t\t\t\tarrData.addUint8((arrVal as string).charCodeAt(0));"
+                                )
+                            else:
+                                encode_cases_lines.append(
+                                    f"\t\t\t\t\tarrData.add{enc_fmt}(arrVal);"
+                                )
+                        encode_cases_lines.append("\t\t\t\t});")
+                        encode_arg_index += 1
 
                 else:
                     self.notify.error(
