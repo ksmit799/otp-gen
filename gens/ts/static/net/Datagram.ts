@@ -120,11 +120,11 @@ export default class Datagram {
         this.bufferIndex += bytes.byteLength;
     }
 
-    public addChannel(channel: number) {
-        this.addUint64(BigInt(channel));
+    public addChannel(channel: bigint) {
+        this.addUint64(channel);
     }
 
-    public addServerHeader(channel: number, sender: number, code: number) {
+    public addServerHeader(channel: bigint, sender: bigint, code: number) {
         this.addInt8(1);
         this.addChannel(channel);
         this.addChannel(sender);
@@ -133,7 +133,7 @@ export default class Datagram {
 
     public addServerControlHeader(code: number) {
         this.addInt8(1);
-        this.addChannel(MessageTypes.CONTROL_CHANNEL);
+        this.addChannel(BigInt(MessageTypes.CONTROL_CHANNEL));
         this.addUint16(code);
     }
 

@@ -1,4 +1,4 @@
-from src.util import is_server_field, has_owner_init
+from src.util import has_owner_init
 from gens.ts.constants_ts import GENERATED_FILE_HEADER
 from gens.ts.util_ts import write_generated_file
 
@@ -95,9 +95,6 @@ class MappingTS:
             owner_init = False
             for i in range(dc_class.get_num_fields()):
                 field = dc_class.get_field(i)
-                if not self.includeServerFields and is_server_field(field):
-                    continue
-
                 if self.includeInitMappings and not owner_init:
                     # We only need at least one owner init field to mark this.
                     owner_init = has_owner_init(field)

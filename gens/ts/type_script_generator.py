@@ -38,7 +38,7 @@ class TypeScriptGenerator(GeneratorInterface):
 
         # Then generate server-side descriptors into otp/dc and generated/dclasses,
         # so they are not wiped out by the static copy.
-        if self.context in ["ai", "both"]:
+        if self.context in ("ai", "both"):
             self.generate_dclasses()
 
         self.notify.info(f"Finished building!")
@@ -174,5 +174,10 @@ class TypeScriptGenerator(GeneratorInterface):
             shutil.rmtree(out_path)
 
         shutil.copytree("./gens/ts/static", out_path)
+
+        # static/ardos is server-only: wipe otp/ardos on client-only builds.
+        ardos_dest = out_path / "ardos"
+        if self.context not in ("ai", "both") and ardos_dest.exists():
+            shutil.rmtree(ardos_dest)
 
         self.notify.info("Done!")

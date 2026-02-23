@@ -1,5 +1,5 @@
 from src.notifier import notify
-from src.util import get_formatted_subatomic_type, is_server_field
+from src.util import get_formatted_subatomic_type
 from gens.ts.constants_ts import GENERATED_FILE_HEADER
 from gens.ts.util_ts import write_generated_file
 
@@ -36,9 +36,6 @@ class FunctionParsingTS:
 
             for i in range(dc_class.get_num_fields()):
                 field = dc_class.get_field(i)
-                if not self.includeServerFields and is_server_field(field):
-                    continue
-
                 static_out += f"\tpublic static call_{name}_{field.getName()}(dc_interface: I{name}, di: DatagramIterator): void {{\n"
 
                 molecular_field = field.asMolecularField()

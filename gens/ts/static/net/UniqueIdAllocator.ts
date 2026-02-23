@@ -7,8 +7,8 @@ export default class UniqueIdAllocator {
     public static readonly IndexEnd = -1;
     public static readonly IndexAllocated = -2;
 
-    private readonly _min: number;
-    private readonly _max: number;
+    private readonly _min: bigint;
+    private readonly _max: bigint;
 
     private readonly _size: number;
     private _table: number[];
@@ -20,11 +20,7 @@ export default class UniqueIdAllocator {
     /**
      * Create a free id pool in the range [min:max].
      */
-    constructor(min: number, max: number) {
-        if (!Number.isInteger(min) || !Number.isInteger(max)) {
-            throw new Error("UniqueIdAllocator: min/max must be integers");
-        }
-
+    constructor(min: bigint, max: bigint) {
         if (max < min) {
             throw new Error("UniqueIdAllocator: max must be >= min");
         }
@@ -32,16 +28,22 @@ export default class UniqueIdAllocator {
         this._min = min;
         this._max = max;
 
-        this._size = this._max - this._min + 1; // +1 because min and max are inclusive.
-        if (this._size <= 0) {
+        const sizeBig = this._max - this._min + 1n; // +1 because min and max are inclusive.
+        if (sizeBig <= 0n) {
             throw new Error("UniqueIdAllocator: size must be > 0");
         }
 
+        if (sizeBig > BigInt(Number.MAX_SAFE_INTEGER)) {
+            throw new Error("UniqueIdAllocator: range too large for JS array");
+        }
+
+        this._size = Number(sizeBig);
         this._table = new Array(this._size);
 
         for (let i = 0; i < this._size; ++i) {
             this._table[i] = i + 1;
         }
+
         this._table[this._size - 1] = UniqueIdAllocator.IndexEnd;
 
         this._next_free = 0;
@@ -53,17 +55,17 @@ export default class UniqueIdAllocator {
      * Returns an id between _min and _max (that were passed to the constructor).
      * IndexEnd is returned if no ids are available.
      */
-    allocate(): number {
+    allocate(): bigint {
         if (this._next_free === UniqueIdAllocator.IndexEnd) {
             // ...all ids allocated.
-            return UniqueIdAllocator.IndexEnd;
+            return BigInt(UniqueIdAllocator.IndexEnd);
         }
 
         const index = this._next_free;
 
         if (this._table[index] === UniqueIdAllocator.IndexAllocated) {
             // Corrupted state (should not happen)
-            return UniqueIdAllocator.IndexEnd;
+            return BigInt(UniqueIdAllocator.IndexEnd);
         }
 
         this._next_free = this._table[this._next_free];
@@ -71,8 +73,7 @@ export default class UniqueIdAllocator {
 
         --this._free;
 
-        const id = index + this._min;
-        return id;
+        return BigInt(index) + this._min;
     }
 
     /**
@@ -87,17 +88,13 @@ export default class UniqueIdAllocator {
      * reserved at any time.
      * @param id
      */
-    initialReserveId(id: number): void {
-        if (!Number.isInteger(id)) {
-            throw new Error("initial_reserve_id: id must be an integer");
-        }
-
+    initialReserveId(id: bigint): void {
         if (id < this._min || id > this._max) {
             // Attempt to reserve out-of-range id.
             throw new Error("initial_reserve_id: id out of range");
         }
 
-        const index = id - this._min; // Convert to _table index.
+        const index = Number(id - this._min); // Convert to _table index.
 
         if (this._table[index] === UniqueIdAllocator.IndexAllocated) {
             throw new Error("initial_reserve_id: id already allocated");
@@ -158,17 +155,13 @@ export default class UniqueIdAllocator {
      * Checks the allocated state of an index. Returns true for
      * indices that are currently allocated and in use.
      */
-    is_allocated(id: number): boolean {
-        if (!Number.isInteger(id)) {
-            return false;
-        }
-
+    is_allocated(id: bigint): boolean {
         if (id < this._min || id > this._max) {
             // This id is out of range, not allocated.
             return false;
         }
 
-        const index = id - this._min; // Convert to _table index.
+        const index = Number(id - this._min); // Convert to _table index.
         return this._table[index] === UniqueIdAllocator.IndexAllocated;
     }
 
@@ -176,17 +169,13 @@ export default class UniqueIdAllocator {
      * Free an allocated index (index must be between _min and _max that were
      * passed to the constructor).
      */
-    free(id: number): boolean {
-        if (!Number.isInteger(id)) {
-            return false;
-        }
-
+    free(id: bigint): boolean {
         if (id < this._min || id > this._max) {
             // Attempt to free out-of-range id.
             return false;
         }
 
-        const index = id - this._min; // Convert to _table index.
+        const index = Number(id - this._min); // Convert to _table index.
 
         if (this._table[index] !== UniqueIdAllocator.IndexAllocated) {
             // Attempt to free non-allocated id.

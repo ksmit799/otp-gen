@@ -5,7 +5,6 @@ from gens.ts.util_ts import (
     format_ts_params_for_atomic_field,
     write_generated_file,
 )
-from src.util import is_server_field
 
 struct_template = """{header}
 {imports}
@@ -141,11 +140,6 @@ class DCInterfaceTS:
                 self.notify.warning(
                     f"Got non atomic field {self.name} - {field.getName()}"
                 )
-                continue
-
-            # Don't include server-only fields.
-            # Clients should never interact with these.
-            if is_server_field(field):
                 continue
 
             params, new_imports = format_ts_params_for_atomic_field(
