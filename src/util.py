@@ -1,3 +1,5 @@
+import argparse
+
 from panda3d.direct import *
 
 
@@ -69,3 +71,38 @@ def is_server_field(field):
 
 def has_owner_init(field):
     return field.isOwnrecv() and field.isRequired()
+
+
+def getArgParser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--language",
+        type=str,
+        default="ts",
+        choices=["ts", "typescript"],
+        help="The language of the generated files.",
+    )
+    parser.add_argument(
+        "--dc-files",
+        type=str,
+        nargs="*",
+        help="An array of DC file paths to be loaded.",
+    )
+
+    parser.add_argument(
+        "--out",
+        type=str,
+        default="dist",
+        help="The path to output generated files.",
+    )
+
+    parser.add_argument(
+        "--notify-level",
+        type=str,
+        choices=["INFO", "WARNING", "ERROR"],
+        default="INFO",
+        help="Notify level.",
+    )
+
+    return parser

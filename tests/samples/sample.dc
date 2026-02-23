@@ -1,0 +1,7 @@
+struct sample {
+  uint64 sample1;
+  uint32 sample2;
+  uint16 sample3;
+  uint8 sample4;
+  string sample5;
+};

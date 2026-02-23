@@ -28,6 +28,18 @@ within OTPClientRepository.
 Support for [Astron](https://github.com/Astron/Astron) is planned for the future.
 In the meantime, you can override OTPClientRepository in your source.
 
+## Usage ##
+
+```
+python -m src.main --dc-files .\tests\samples\sample.dc
+```
+
+## Testing ##
+
+```
+python -m unittest discover -v -s ./tests -p "test_*.py"
+```
+
 ## License ##
 
 *OTP Gen* is licensed under the "MIT License" for more info, refer to the [LICENSE](LICENSE.md) file.
