@@ -4,7 +4,6 @@ import sys
 from src.notifier import notify, LoggingNotifier
 from src.dc_loader import DCLoader
 
-
 if __name__ == "__main__":
     # Parse CLI args.
     parser = argparse.ArgumentParser()
@@ -17,6 +16,12 @@ if __name__ == "__main__":
         "--dc-files",
         nargs="*",
         help="An array of DC file paths to be loaded.",
+    )
+    parser.add_argument(
+        "--context",
+        choices=["ai", "cl", "both"],
+        default="both",
+        help="The type of files to be generated (ai/cl/both)",
     )
     parser.add_argument(
         "--out",
@@ -50,5 +55,5 @@ if __name__ == "__main__":
     notify.info(f"Build directory path: {args.out}")
 
     # Start the generator!
-    generator = Generator(dc_loader, args.out)
+    generator = Generator(dc_loader, args.context, args.out)
     generator.start()

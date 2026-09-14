@@ -1,6 +1,7 @@
 class GeneratorInterface:
-    def __init__(self, dc_loader, out_dir):
+    def __init__(self, dc_loader, context, out_dir):
         self.dc_loader = dc_loader
+        self.context = context
         self.outDir = out_dir
 
     def start(self):
@@ -16,6 +17,9 @@ class GeneratorInterface:
         raise NotImplementedError
 
     def generate_struct_parsing(self):
+        raise NotImplementedError
+
+    def generate_struct_packing(self):
         raise NotImplementedError
 
     def generate_object_init(self):

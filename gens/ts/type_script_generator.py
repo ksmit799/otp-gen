@@ -4,7 +4,9 @@ from pathlib import Path
 
 from src.generator_interface import GeneratorInterface
 from src.notifier import notify
+from gens.ts.struct_packing_ts import StructPackingTS
 from gens.ts.dc_interface_ts import DCInterfaceTS
+from gens.ts.dclasses_ts import DClassesTS
 from gens.ts.remote_interface_ts import RemoteInterfaceTS
 from gens.ts.remote_ts import RemoteTS
 from gens.ts.struct_parsing_ts import StructParsingTS
@@ -20,113 +22,147 @@ class TypeScriptGenerator(GeneratorInterface):
         self.notify.info("Configured generator for typescript...")
 
         self.cleanup_out_dir()
+
+        # Always generate the client-side / shared artifacts first.
         self.generate_dc_interfaces()
         self.generate_remote_interfaces()
         self.generate_remotes()
         self.generate_struct_parsing()
+        self.generate_struct_packing()
         self.generate_object_init()
         self.generate_function_parsing()
         self.generate_mapping()
+
+        # Copy static runtime files.
         self.copy_static_files()
+
+        # Then generate server-side descriptors into otp/dc and generated/dclasses,
+        # so they are not wiped out by the static copy.
+        if self.context in ("ai", "both"):
+            self.generate_dclasses()
 
         self.notify.info(f"Finished building!")
 
     def cleanup_out_dir(self):
         out_path = Path().absolute() / self.outDir / "generated"
         if os.path.exists(out_path) and os.path.isdir(out_path):
-            # Clean any existing build files.
             shutil.rmtree(out_path)
 
-    def generate_dc_interfaces(self):
-        """
-        Generates all the distributed class interfaces.
-        This includes structs.
-        :return:
-        """
-        self.notify.info("Generating DC interfaces...")
+    def _out_path(self, subdir):
+        path = Path().absolute() / self.outDir / "generated" / subdir
+        path.mkdir(parents=True, exist_ok=True)
+        return path
 
-        out_path = Path().absolute() / self.outDir / "generated/dc"
-        out_path.mkdir(parents=True, exist_ok=True)
-
+    def _run_per_class(
+        self, step_name, subdir, writer_class, skip_structs=False, debug_each=False
+    ):
+        self.notify.info(step_name)
+        out_path = self._out_path(subdir)
         for name, dclass in self.dc_loader.dclasses_by_name.items():
-            interface = DCInterfaceTS(name, dclass, out_path)
-            interface.write()
-            self.notify.debug(f"Wrote interface class '{name}'")
-
+            if skip_structs and dclass.isStruct():
+                continue
+            writer_class(name, dclass, out_path).write()
+            if debug_each:
+                self.notify.debug(f"Wrote '{name}'")
         self.notify.info("Done!")
+
+    def _run_single(self, step_name, subdir, writer_class, **writer_kwargs):
+        self.notify.info(step_name)
+        out_path = self._out_path(subdir)
+        writer_class(self.dc_loader, out_path, **writer_kwargs).write()
+        self.notify.info("Done!")
+
+    def _include_server_fields(self):
+        """Include server-only fields when generating server call mappings."""
+        return self.context in ("ai", "both")
+
+    def _include_client_mappings(self):
+        """AI still needs client mappings; this is always true for generated outputs."""
+        return self.context in ("cl", "ai", "both")
+
+    def generate_dc_interfaces(self):
+        """Interfaces for all distributed classes (including structs)."""
+        self._run_per_class(
+            "Generating DC interfaces...",
+            "dc",
+            DCInterfaceTS,
+            skip_structs=False,
+            debug_each=True,
+        )
 
     def generate_remote_interfaces(self):
-        self.notify.info("Generating remote interfaces...")
-
-        out_path = Path().absolute() / self.outDir / "generated/iremote"
-        out_path.mkdir(parents=True, exist_ok=True)
-
-        for name, dclass in self.dc_loader.dclasses_by_name.items():
-            if dclass.isStruct():
-                continue
-
-            interface = RemoteInterfaceTS(name, dclass, out_path)
-            interface.write()
-
-        self.notify.info("Done!")
+        """Interfaces for non-struct classes, typings for clsend/ownsend only."""
+        self._run_per_class(
+            "Generating remote interfaces...",
+            "iremote",
+            RemoteInterfaceTS,
+            skip_structs=True,
+        )
 
     def generate_remotes(self):
-        self.notify.info("Generating remotes...")
-
-        out_path = Path().absolute() / self.outDir / "generated/remote"
-        out_path.mkdir(parents=True, exist_ok=True)
-
-        for name, dclass in self.dc_loader.dclasses_by_name.items():
-            if dclass.isStruct():
-                continue
-
-            remote = RemoteTS(name, dclass, out_path)
-            remote.write()
-
-        self.notify.info("Done!")
+        """Remote classes implementing datagram packing for clsend/ownsend."""
+        self._run_per_class(
+            "Generating remotes...",
+            "remote",
+            RemoteTS,
+            skip_structs=True,
+        )
 
     def generate_struct_parsing(self):
-        self.notify.info("Generating struct parsing...")
+        """Functions to parse structs from DC files."""
+        self._run_single(
+            "Generating struct parsing...",
+            "fn",
+            StructParsingTS,
+        )
 
-        out_path = Path().absolute() / self.outDir / "generated/fn"
-        out_path.mkdir(parents=True, exist_ok=True)
-
-        struct = StructParsingTS(self.dc_loader, out_path)
-        struct.write()
-
-        self.notify.info("Done!")
+    def generate_struct_packing(self):
+        """Functions to pack structs into datagrams."""
+        self._run_single(
+            "Generating struct packing...",
+            "fn",
+            StructPackingTS,
+        )
 
     def generate_object_init(self):
-        self.notify.info("Generating object initialization...")
-
-        out_path = Path().absolute() / self.outDir / "generated/fn"
-        out_path.mkdir(parents=True, exist_ok=True)
-
-        obj = ObjectInitTS(self.dc_loader, out_path)
-        obj.write()
-
-        self.notify.info("Done!")
+        """Functions to init distributed objects (required/ownrecv)."""
+        self._run_single(
+            "Generating object initialization...",
+            "fn",
+            ObjectInitTS,
+        )
 
     def generate_function_parsing(self):
-        self.notify.info("Generating function parsing...")
-
-        out_path = Path().absolute() / self.outDir / "generated/fn"
-        out_path.mkdir(parents=True, exist_ok=True)
-
-        func = FunctionParsingTS(self.dc_loader, out_path)
-        func.write()
-
-        self.notify.info("Done!")
+        """Functions to parse field updates from the server."""
+        self._run_single(
+            "Generating function parsing...",
+            "fn",
+            FunctionParsingTS,
+            include_server_fields=self._include_server_fields(),
+        )
 
     def generate_mapping(self):
-        self.notify.info("Generating mapping...")
+        """Static mapping from class/field IDs to generated functions."""
+        self._run_single(
+            "Generating mapping...",
+            "fn",
+            MappingTS,
+            include_server_fields=self._include_server_fields(),
+            include_remote_mappings=self._include_client_mappings(),
+            include_init_mappings=self._include_client_mappings(),
+        )
 
-        out_path = Path().absolute() / self.outDir / "generated/fn"
-        out_path.mkdir(parents=True, exist_ok=True)
-
-        mapping = MappingTS(self.dc_loader, out_path)
-        mapping.write()
-
+    def generate_dclasses(self):
+        """Server-side DC descriptors in generated/dclasses; dclasses.ts in otp/dc."""
+        self.notify.info("Generating DC server descriptors...")
+        class_files_path = self._out_path("dclasses")
+        otp_dc_path = Path().absolute() / self.outDir / "otp" / "dc"
+        otp_dc_path.mkdir(parents=True, exist_ok=True)
+        DClassesTS(
+            self.dc_loader,
+            class_files_path=class_files_path,
+            mapping_file_path=otp_dc_path,
+        ).write()
         self.notify.info("Done!")
 
     def copy_static_files(self):
@@ -138,5 +174,10 @@ class TypeScriptGenerator(GeneratorInterface):
             shutil.rmtree(out_path)
 
         shutil.copytree("./gens/ts/static", out_path)
+
+        # static/ardos is server-only: wipe otp/ardos on client-only builds.
+        ardos_dest = out_path / "ardos"
+        if self.context not in ("ai", "both") and ardos_dest.exists():
+            shutil.rmtree(ardos_dest)
 
         self.notify.info("Done!")

@@ -3,6 +3,8 @@
  * DO NOT MODIFY
  */
 
+import MessageTypes from "./MessageTypes";
+
 // Max amount of data we can have is an uint16 (65k bytes)
 const MAX_DG_SIZE = 0xffff;
 // 128 bytes seems like a good minimum datagram size.
@@ -99,13 +101,43 @@ export default class Datagram {
         }
     }
 
-    public addBlob(arg: ArrayBuffer) {
-        // TODO: Add this.
+    public addBlob(arg: ArrayBufferView) {
+        // N.B. This is just a view over the existing data, not an alloc.
+        const bytes = new Uint8Array(arg.buffer, arg.byteOffset, arg.byteLength);
+
+        this.ensureLength(bytes.byteLength + 2); // Plus 2 for the uint16.
+        this.addUint16(bytes.byteLength);
+
+        new Uint8Array(this.buffer, this.bufferIndex, bytes.byteLength).set(bytes);
+        this.bufferIndex += bytes.byteLength;
     }
 
-    public getMessage(): ArrayBufferView {
-        // Converting to a Uint8Array here *might* wipe out any endianness we've done above.
-        // From what I can tell, this is a limitation of the platform itself.
+    public appendData(arg: ArrayBufferView) {
+        const bytes = new Uint8Array(arg.buffer, arg.byteOffset, arg.byteLength);
+        this.ensureLength(bytes.byteLength);
+
+        new Uint8Array(this.buffer, this.bufferIndex, bytes.byteLength).set(bytes);
+        this.bufferIndex += bytes.byteLength;
+    }
+
+    public addChannel(channel: bigint) {
+        this.addUint64(channel);
+    }
+
+    public addServerHeader(channel: bigint, sender: bigint, code: number) {
+        this.addInt8(1);
+        this.addChannel(channel);
+        this.addChannel(sender);
+        this.addUint16(code);
+    }
+
+    public addServerControlHeader(code: number) {
+        this.addInt8(1);
+        this.addChannel(BigInt(MessageTypes.CONTROL_CHANNEL));
+        this.addUint16(code);
+    }
+
+    public getMessage(): Uint8Array {
         return new Uint8Array(this.buffer.slice(0, this.bufferIndex));
     }
 }
