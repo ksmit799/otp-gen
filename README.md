@@ -16,7 +16,7 @@ Please open an issue if you encounter any of these.
 
 ## Supported Languages ##
 
-- TypeScript (_development_)
+- TypeScript (_supported_)
 - C#/Unity (_planned_)
 
 ## Limitations ##
